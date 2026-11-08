@@ -1,0 +1,301 @@
+@using PhysioClinic.Models
+@model IEnumerable<PhysioClinic.Models.Appointment>
+@{
+    var selectedDate = (DateTime)(ViewBag.SelectedDate ?? DateTime.Today);
+    var therapistId = ViewBag.TherapistId as int?;
+    var therapists = ViewBag.Therapists as List<PhysioClinic.Models.Therapist> ?? new();
+    ViewData["Title"] = "جدول المواعيد والعيادات";
+}
+
+<!-- Page Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">
+            @(User.IsInRole(ClinicRoles.Doctor) ? "جدول جلساتي اليومية والسريرية 🩺" : "جدول الجلسات والمواعيد 📅")
+        </h3>
+        <p class="text-muted mb-0">
+            @(User.IsInRole(ClinicRoles.Doctor) ? "متابعة المرضى وتوثيق الجلسات السريرية واعتماد تقارير التطور." : "إدارة تدفق المراجعين، حجز الفترات، وتأكيد الحضور.")
+        </p>
+    </div>
+
+    @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+    {
+        <a asp-action="Book" class="btn btn-modern btn-modern-primary">
+            <i class="bi bi-calendar-plus-fill me-1"></i>
+            <span>حجز موعد جديد (Slots)</span>
+        </a>
+    }
+</div>
+
+<!-- Date Navigation & Therapist Filter Bar -->
+<div class="card-modern mb-4 p-3">
+    <form method="get" class="row align-items-center g-3">
+        <!-- Date Selector -->
+        <div class="col-md-5 d-flex align-items-center gap-2">
+            <a asp-action="Index" asp-route-date="@selectedDate.AddDays(-1).ToString("yyyy-MM-dd")" asp-route-therapistId="@therapistId" class="btn btn-modern btn-modern-outline btn-sm">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+
+            <input type="date" name="date" class="form-control form-control-modern fw-bold text-center" value="@selectedDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+
+            <a asp-action="Index" asp-route-date="@selectedDate.AddDays(1).ToString("yyyy-MM-dd")" asp-route-therapistId="@therapistId" class="btn btn-modern btn-modern-outline btn-sm">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+
+            <a asp-action="Index" asp-route-date="@DateTime.Today.ToString("yyyy-MM-dd")" asp-route-therapistId="@therapistId" class="btn btn-modern btn-modern-soft btn-sm">
+                اليوم
+            </a>
+        </div>
+
+        <!-- Therapist Selector -->
+        <div class="col-md-4">
+            <select name="therapistId" class="form-select form-select-modern" onchange="this.form.submit()">
+                <option value="">-- جميع الأخصائيين --</option>
+                @foreach (var th in therapists)
+                {
+                    if (therapistId == th.Id)
+                    {
+                        <option value="@th.Id" selected>@th.FullName</option>
+                    }
+                    else
+                    {
+                        <option value="@th.Id">@th.FullName</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3 text-md-start text-muted small">
+            <span>جلسات هذا اليوم: <strong class="text-dark fs-6">@Model.Count()</strong></span>
+        </div>
+    </form>
+</div>
+
+<!-- Appointments Table Card -->
+<div class="card-modern">
+    <div class="p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5">
+                <div class="zone-avatar mx-auto mb-3" style="width: 64px; height: 64px; background-color: var(--slate-100); color: var(--slate-400); font-size: 2rem;">
+                    <i class="bi bi-calendar-x"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">لا توجد مواعيد مجدولة في هذا التاريخ (@selectedDate.ToString("dd-MM-yyyy"))</h5>
+                <p class="text-muted small">يمكنك اختيار تاريخ آخر أو التسكين في الفترات المتاحة.</p>
+                @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+                {
+                    <a asp-action="Book" asp-route-date="@selectedDate.ToString("yyyy-MM-dd")" class="btn btn-modern btn-modern-primary mt-2">
+                        <i class="bi bi-plus-lg me-1"></i> حجز موعد لهذا اليوم
+                    </a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>الوقت المخصص</th>
+                            <th>المريض</th>
+                            <th>الأخصائي المعالج</th>
+                            <th>البرنامج العلاجي</th>
+                            <th>الحالة</th>
+                            <th>التقرير والملاحظات</th>
+                            <th class="text-start">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var appt in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark font-monospace fs-6">
+                                        <i class="bi bi-clock me-1 text-teal" style="color: var(--primary);"></i>
+                                        <span dir="ltr">@appt.StartTime - @appt.EndTime</span>
+                                    </div>
+                                    <small class="text-muted">جلسة 45 دقيقة</small>
+                                </td>
+                                <td>
+                                    <a asp-controller="Clients" asp-action="Details" asp-route-id="@appt.ClientId" class="text-decoration-none fw-bold text-dark">
+                                        @appt.Client?.FullName
+                                    </a>
+                                    <div class="small text-muted" dir="ltr" style="text-align: right;"><span class="me-1">@appt.Client?.Phone</span><i class="bi bi-telephone text-muted"></i></div>
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill" style="background-color: @(appt.Therapist?.ColorTag ?? "#0d9488")15; color: @(appt.Therapist?.ColorTag ?? "#0d9488"); border: 1px solid @(appt.Therapist?.ColorTag ?? "#0d9488")30; font-weight: 600;">
+                                        @appt.Therapist?.FullName
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (appt.TreatmentPlan != null)
+                                    {
+                                        <a asp-controller="TreatmentPlan" asp-action="Details" asp-route-id="@appt.TreatmentPlanId" class="small text-decoration-none text-dark fw-bold">
+                                            @appt.TreatmentPlan.Title
+                                        </a>
+                                        <div class="small text-muted">الجلسة #@appt.SessionNumber من أصل @appt.TreatmentPlan.TotalSessions</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle">استشارة وتقييم أولي</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (appt.Status == "Confirmed")
+                                    {
+                                        <span class="badge-status badge-status-confirmed">حاضر بالعيادة</span>
+                                    }
+                                    else if (appt.Status == "Scheduled")
+                                    {
+                                        <span class="badge-status badge-status-scheduled">مجدول</span>
+                                    }
+                                    else if (appt.Status == "Completed")
+                                    {
+                                        <span class="badge-status badge-status-completed">مكتمل وموثق</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status badge-status-cancelled">@appt.Status</span>
+                                    }
+                                </td>
+                                <td class="small" style="max-width: 260px;">
+                                    @if (appt.PainLevelAfter.HasValue)
+                                    {
+                                        <div class="fw-bold text-teal mb-1" style="color: var(--primary);">
+                                            <i class="bi bi-heart-pulse me-1"></i> ألم بعد الجلسة: @appt.PainLevelAfter/10
+                                        </div>
+                                    }
+                                    <span class="text-muted d-block text-truncate" title="@appt.SessionNotes">
+                                        @(appt.SessionNotes ?? "لا توجد ملاحظات مسجلة بعد.")
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(appt.CompletedByDoctorName))
+                                    {
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                            <i class="bi bi-pen me-1"></i> د. @appt.CompletedByDoctorName
+                                        </small>
+                                    }
+                                </td>
+                                <td class="text-start">
+                                    <div class="d-flex align-items-center gap-1 justify-content-end">
+                                        <!-- DOCTOR & ADMIN ACTION: Fill Clinical Post-Session Form -->
+                                        @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
+                                        {
+                                            @if (appt.Status != "Completed")
+                                            {
+                                                <button type="button" class="btn btn-sm btn-modern btn-modern-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="توثيق الجلسة وكتابة تقرير التطور">
+                                                    <i class="bi bi-file-earmark-medical me-1"></i> توثيق الجلسة
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-sm btn-light border py-1 px-2 text-success" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="عرض / تعديل التوثيق">
+                                                    <i class="bi bi-check2-circle me-1"></i> التقرير
+                                                </button>
+                                            }
+                                        }
+
+                                        <!-- RECEPTIONIST & ADMIN ACTION: Confirm Attendance & Cancel -->
+                                        @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+                                        {
+                                            @if (appt.Status == "Scheduled")
+                                            {
+                                                <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@appt.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary py-1 px-2" title="تأكيد وصول المريض بالاستقبال">
+                                                        <i class="bi bi-person-check me-1"></i> وصل
+                                                    </button>
+                                                </form>
+
+                                                <form asp-action="CancelAppointment" method="post" class="d-inline m-0" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟');">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@appt.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 py-1 px-2" title="إلغاء الموعد">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- DOCTOR & ADMIN ONLY: Post-Session Clinical Documentation Modal -->
+                            @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
+                            {
+                                <div class="modal fade" id="sessionModal-@appt.Id" tabindex="-1" aria-labelledby="modalLabel-@appt.Id" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem;">
+                                            <div class="modal-header border-bottom py-3" style="background-color: var(--primary-light);">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="zone-avatar" style="width: 38px; height: 38px; background: var(--primary); color: #fff;">
+                                                        <i class="bi bi-clipboard2-pulse"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="modal-title fw-bold text-dark mb-0" id="modalLabel-@appt.Id">نموذج توثيق ما بعد الجلسة (خاص بالطبيب المعالج)</h6>
+                                                        <small class="text-muted">المريض: <strong>@appt.Client?.FullName</strong> | @(appt.TreatmentPlan != null ? appt.TreatmentPlan.Title : "جلسة استشارة وتقييم")</small>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn-close me-auto ms-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+
+                                            <form asp-action="CompleteSession" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@appt.Id" />
+
+                                                <div class="modal-body p-4">
+                                                    <!-- Pain level after session -->
+                                                    <div class="mb-3">
+                                                        <label class="form-label-modern fw-bold mb-1">
+                                                            مستوى الألم بعد إتمام الجلسة (VAS Pain Scale 1-10)
+                                                        </label>
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <input type="range" class="form-range flex-grow-1" min="1" max="10" name="painLevelAfter" id="painRange-@appt.Id" value="@(appt.PainLevelAfter ?? 3)" oninput="document.getElementById('painVal-@appt.Id').innerText = this.value" />
+                                                            <span class="badge bg-teal fs-6 px-3 py-2 rounded-pill" style="background-color: var(--primary);" id="painVal-@appt.Id">@(appt.PainLevelAfter ?? 3) / 10</span>
+                                                        </div>
+                                                        <small class="text-muted">1-3 ألم خفيف محتمل، 4-6 ألم متوسط، 7-10 ألم شديد.</small>
+                                                    </div>
+
+                                                    <!-- Modalities & Techniques -->
+                                                    <div class="mb-3">
+                                                        <label class="form-label-modern fw-bold mb-1">الأساليب والتقنيات المنفذة في هذه الجلسة</label>
+                                                        <input type="text" name="techniquesUsed" class="form-control form-control-modern" value="@appt.TechniquesUsed" placeholder="مثال: علاج يدوي وتحريك فقرات قطنية، تيار TENS 15 دقيقة، إبر جافة" />
+                                                    </div>
+
+                                                    <!-- Patient Response -->
+                                                    <div class="mb-3">
+                                                        <label class="form-label-modern fw-bold mb-1">استجابة المريض وتحمله للتمارين (Patient Response)</label>
+                                                        <input type="text" name="patientResponse" class="form-control form-control-modern" placeholder="مثال: تحسن في المدى الحركي بنسبة 20%، خفة في الحركة دون تنميل" />
+                                                    </div>
+
+                                                    <!-- Clinical Progress Notes -->
+                                                    <div class="mb-3">
+                                                        <label class="form-label-modern fw-bold mb-1">الملاحظات السريرية المفصلة وتوجيهات الطبيب</label>
+                                                        <textarea name="clinicalNotes" rows="3" class="form-control form-control-modern" placeholder="وثّق ملاحظاتك الطبية حول حالة المريض وتطورها...">@appt.SessionNotes</textarea>
+                                                    </div>
+
+                                                    <!-- Next Session Recommendations -->
+                                                    <div>
+                                                        <label class="form-label-modern fw-bold mb-1">التوصيات والتمارين المنزلية حتى الجلسة القادمة</label>
+                                                        <input type="text" name="nextSessionPlan" class="form-control form-control-modern" placeholder="مثال: الاستمرار على تمرين مكينزي 3 مرات يومياً والكمادات الباردة" />
+                                                    </div>
+                                                </div>
+
+                                                <div class="modal-footer border-top bg-light p-3">
+                                                    <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
+                                                    <button type="submit" class="btn btn-modern btn-modern-primary px-4">
+                                                        <i class="bi bi-check2-circle me-1"></i> اعتماد التقرير وإتمام الجلسة
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

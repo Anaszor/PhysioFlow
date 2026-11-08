@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: physioclinic-web
+    runtime: docker
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DatabaseProvider
+        value: PostgreSql
+      - key: ConnectionStrings__PostgreSqlConnection
+        fromDatabase:
+          name: physioclinic-db
+          property: connectionString
+
+databases:
+  - name: physioclinic-db
+    databaseName: physioclinic
+    user: physiouser
+    plan: free
+    region: frankfurt

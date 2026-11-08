@@ -1,0 +1,268 @@
+@using Microsoft.AspNetCore.Identity
+@using PhysioClinic.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@{
+    ApplicationUser? currentUser = null;
+    string currentRole = "طاقم العيادة";
+    string roleBadgeStyle = "background-color: var(--primary-light); color: var(--primary-darker);";
+    if (SignInManager.IsSignedIn(User))
+    {
+        currentUser = await UserManager.GetUserAsync(User);
+        if (User.IsInRole(ClinicRoles.Admin))
+        {
+            currentRole = "مدير النظام (Admin)";
+            roleBadgeStyle = "background-color: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe;";
+        }
+        else if (User.IsInRole(ClinicRoles.Doctor))
+        {
+            currentRole = "أخصائي معالج (Doctor)";
+            roleBadgeStyle = "background-color: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4;";
+        }
+        else if (User.IsInRole(ClinicRoles.Receptionist))
+        {
+            currentRole = "استقبال (Receptionist)";
+            roleBadgeStyle = "background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;";
+        }
+    }
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - فيزيو فلو | PhysioFlow Clinic</title>
+
+    <!-- Local Bootstrap 5.3 RTL CSS (Reliable, No CDN Blocking) -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    <!-- Local Bootstrap Icons (Offline & Fast) -->
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <!-- PhysioFlow Modern Design System -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Sidebar Overlay for Mobile/Tablet -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="appSidebar">
+            <!-- Brand Logo -->
+            <div class="sidebar-header">
+                <div class="brand-icon-box">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark tracking-tight">Physio<span style="color: var(--primary);">Flow</span></h5>
+                    <span class="text-muted" style="font-size: 0.72rem; font-weight: 600;">نظام العلاج الطبيعي والتأهيل</span>
+                </div>
+                <button class="btn btn-sm btn-light border-0 d-xl-none ms-auto me-0" onclick="toggleSidebar()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="sidebar-nav">
+                <div class="nav-category">العيادة وسير العمل</div>
+                <a asp-controller="Dashboard" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                    <span>لوحة التحكم والمتابعة</span>
+                </a>
+
+                @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+                {
+                    <a asp-controller="Intake" asp-action="New" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Intake" ? "active" : "")">
+                        <i class="bi bi-clipboard2-pulse-fill"></i>
+                        <span>تسجيل واستبيان مريض جديد</span>
+                    </a>
+                }
+
+                <a asp-controller="Appointments" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Appointments" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+                    <i class="bi bi-calendar-week-fill"></i>
+                    <span>@(User.IsInRole(ClinicRoles.Doctor) ? "جدول جلساتي اليومية" : "جدول المواعيد والعيادات")</span>
+                </a>
+
+                @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+                {
+                    <a asp-controller="Appointments" asp-action="Book" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Appointments" && ViewContext.RouteData.Values["action"]?.ToString() == "Book" ? "active" : "")">
+                        <i class="bi bi-calendar-plus-fill"></i>
+                        <span>حجز فترات الجلسات (Slots)</span>
+                    </a>
+                }
+
+                <div class="nav-category mt-3">الملفات الطبية والتأهيل</div>
+                <a asp-controller="Clients" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Clients" ? "active" : "")">
+                    <i class="bi bi-people-fill"></i>
+                    <span>سجلات وملفات المرضى</span>
+                </a>
+
+                @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
+                {
+                    <a asp-controller="Consultation" asp-action="Create" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Consultation" ? "active" : "")">
+                        <i class="bi bi-stethoscope"></i>
+                        <span>فحص وتشخيص سريري</span>
+                    </a>
+                    <a asp-controller="TreatmentPlan" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TreatmentPlan" ? "active" : "")">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                        <span>الخطط العلاجية والتمارين</span>
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="TreatmentPlan" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TreatmentPlan" ? "active" : "")">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                        <span>البرامج العلاجية (اطلاع)</span>
+                    </a>
+                }
+
+                @if (User.IsInRole(ClinicRoles.Admin))
+                {
+                    <div class="nav-category mt-3">إدارة النظام والأدوار</div>
+                    <a asp-controller="Account" asp-action="Users" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Account" ? "active" : "")">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>إدارة الطاقم والمستخدمين</span>
+                    </a>
+                }
+            </nav>
+
+            <!-- Sidebar Footer User Card -->
+            <div class="sidebar-footer">
+                @if (SignInManager.IsSignedIn(User) && currentUser != null)
+                {
+                    <div class="therapist-profile-pill d-flex align-items-center justify-content-between p-2">
+                        <div class="d-flex align-items-center gap-2 overflow-hidden">
+                            <div class="therapist-avatar" style="background: var(--primary-gradient);">
+                                @(string.IsNullOrEmpty(currentUser.FullName) ? "U" : currentUser.FullName.Substring(0, 1))
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="fw-bold text-truncate text-dark small">@currentUser.FullName</div>
+                                <div class="text-truncate" style="font-size: 0.72rem; color: var(--primary-darker);">
+                                    <span class="d-inline-block rounded-circle bg-success me-1" style="width: 7px; height: 7px;"></span>
+                                    @currentRole
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-light border-0 text-danger p-1" title="تسجيل الخروج">
+                                <i class="bi bi-box-arrow-right fs-6"></i>
+                            </button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-modern btn-modern-primary btn-sm w-100">
+                        <i class="bi bi-box-arrow-in-left me-1"></i> تسجيل الدخول
+                    </a>
+                }
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="app-main">
+            <!-- Topbar Header -->
+            <header class="app-topbar">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light d-xl-none border p-2 rounded-3" type="button" onclick="toggleSidebar()" aria-label="Toggle Menu">
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
+                    <!-- Quick Search Input -->
+                    <form asp-controller="Clients" asp-action="Index" method="get" class="topbar-search d-none d-md-block">
+                        <i class="bi bi-search topbar-search-icon"></i>
+                        <input type="text" name="search" placeholder="بحث سريع عن مريض (الاسم، الجوال)..." autocomplete="off" />
+                    </form>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <div class="text-muted d-none d-sm-block me-2 small">
+                        <i class="bi bi-calendar3 me-1 text-teal" style="color: var(--primary);"></i>
+                        @DateTime.Today.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("ar-SA"))
+                    </div>
+
+                    @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+                    {
+                        <a asp-controller="Intake" asp-action="New" class="btn btn-modern btn-modern-outline btn-sm">
+                            <i class="bi bi-person-plus"></i>
+                            <span class="d-none d-sm-inline">مريض جديد</span>
+                        </a>
+
+                        <a asp-controller="Appointments" asp-action="Book" class="btn btn-modern btn-modern-primary btn-sm">
+                            <i class="bi bi-plus-lg"></i>
+                            <span>حجز جلسة</span>
+                        </a>
+                    }
+                    else if (User.IsInRole(ClinicRoles.Doctor))
+                    {
+                        <a asp-controller="Consultation" asp-action="Create" class="btn btn-modern btn-modern-outline btn-sm">
+                            <i class="bi bi-stethoscope"></i>
+                            <span class="d-none d-sm-inline">فحص واستشارة</span>
+                        </a>
+
+                        <a asp-controller="Appointments" asp-action="Index" class="btn btn-modern btn-modern-primary btn-sm">
+                            <i class="bi bi-calendar2-check"></i>
+                            <span>جلساتي اليوم</span>
+                        </a>
+                    }
+
+                    @if (SignInManager.IsSignedIn(User) && currentUser != null)
+                    {
+                        <div class="d-flex align-items-center gap-2 ms-2 ps-2 border-start">
+                            <span class="badge rounded-pill px-3 py-1 d-none d-lg-inline-block" style="@roleBadgeStyle font-size: 0.78rem; font-weight: 600;">
+                                @currentRole
+                            </span>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline m-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0 d-flex align-items-center gap-1 rounded-pill px-2 py-1" title="تسجيل الخروج">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span class="d-none d-md-inline small">خروج</span>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </header>
+
+            <!-- Flash Alert Messages -->
+            <div class="px-4 pt-3">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-3 py-3 rounded-3" role="alert" style="background-color: #ecfdf5; color: #065f46; border-right: 5px solid #10b981 !important;">
+                        <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                        <div class="fw-bold">@TempData["SuccessMessage"]</div>
+                        <button type="button" class="btn-close me-auto ms-0" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-3 py-3 rounded-3" role="alert" style="background-color: #fef2f2; color: #991b1b; border-right: 5px solid #ef4444 !important;">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 text-danger"></i>
+                        <div class="fw-bold">@TempData["ErrorMessage"]</div>
+                        <button type="button" class="btn-close me-auto ms-0" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+            </div>
+
+            <!-- Page Body -->
+            <main class="app-content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <!-- Local Bootstrap JS Bundle -->
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            sidebar.classList.toggle('show');
+            if (backdrop) {
+                backdrop.classList.toggle('show');
+            }
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

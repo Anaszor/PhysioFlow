@@ -1,0 +1,170 @@
+@model PhysioClinic.Models.TreatmentPlan
+@{
+    ViewData["Title"] = "إنشاء خطة علاجية جديدة";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Page Title & Header -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-1 text-dark">تحديد الخطة العلاجية والدوائية 📋</h3>
+                <p class="text-muted mb-0">تحديد عدد الجلسات، الأجهزة المستخدمة، وإرشادات التمارين والكمادات المنزلية.</p>
+            </div>
+            <a asp-action="Index" class="btn btn-modern btn-modern-outline">
+                <i class="bi bi-arrow-right me-1"></i> العودة للخطط
+            </a>
+        </div>
+
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
+
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="width: 36px; height: 36px; background-color: var(--primary-light); color: var(--primary-dark);">
+                            <i class="bi bi-sliders"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0 text-dark">المعطيات الأساسية للخطة العلاجية</h6>
+                    </div>
+                </div>
+                <div class="card-modern-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="ClientId" class="form-label-modern">المريض المستفيد <span class="text-danger">*</span></label>
+                            <select asp-for="ClientId" asp-items="ViewBag.Clients" class="form-select form-select-modern"></select>
+                            <span asp-validation-for="ClientId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="TherapistId" class="form-label-modern">الأخصائي المشرف على الخطة <span class="text-danger">*</span></label>
+                            <select asp-for="TherapistId" asp-items="ViewBag.Therapists" class="form-select form-select-modern"></select>
+                            <span asp-validation-for="TherapistId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Title" class="form-label-modern">مسمى البرنامج التأهيلي <span class="text-danger">*</span></label>
+                            <input asp-for="Title" class="form-control form-control-modern fw-bold" placeholder="مثال: برنامج تأهيل تمزق أربطة الركبة واستعادة التوازن - 12 جلسة" />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="TotalSessions" class="form-label-modern">إجمالي الجلسات المقررة</label>
+                            <div class="input-group">
+                                <input asp-for="TotalSessions" type="number" min="1" max="100" class="form-control form-control-modern" />
+                                <span class="input-group-text bg-white border-start-0">جلسة</span>
+                            </div>
+                            <span asp-validation-for="TotalSessions" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Frequency" class="form-label-modern">التكرار الأسبوعي</label>
+                            <select asp-for="Frequency" class="form-select form-select-modern">
+                                <option value="3 جلسات أسبوعياً">3 جلسات أسبوعياً (الأنسب للإصابات الحادة)</option>
+                                <option value="جلستان أسبوعياً">جلستان أسبوعياً (مرحلة التأهيل والتقوية)</option>
+                                <option value="جلسة واحدة أسبوعياً">جلسة واحدة أسبوعياً (متابعة وصيانة)</option>
+                                <option value="يومياً مكثف">يومياً مكثف</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="StartDate" class="form-label-modern">تاريخ البدء</label>
+                            <input asp-for="StartDate" type="date" class="form-control form-control-modern fw-bold" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modalities Selection Chips -->
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="width: 36px; height: 36px; background-color: #ecfdf5; color: #059669;">
+                            <i class="bi bi-magic"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0 text-dark">وسائل وأجهزة العلاج الطبيعي المعتمدة (Modalities)</h6>
+                    </div>
+                </div>
+                <div class="card-modern-body">
+                    <label class="form-label-modern text-muted mb-2">انقر على الأساليب لإضافتها للخطة تلقائياً:</label>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('علاج يدوي وتحريك مفاصل (Manual Therapy)')">
+                            🤲 علاج يدوي وتحريك مفاصل
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('تيار كهربائي مسكن (TENS)')">
+                            ⚡ تيار كهربائي مسكن TENS
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('إبر جافة لعقد العضلات (Dry Needling)')">
+                            🎯 إبر جافة Dry Needling
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('موجات تصادمية (Shockwave)')">
+                            🌊 موجات تصادمية Shockwave
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('ليزر علاجي عالي الشدة (High-Intensity Laser)')">
+                            🔴 ليزر علاجي عالي الشدة
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('تمارين تقوية واستقرار حركي (Therapeutic Exercises)')">
+                            🏋️ تمارين تقوية وتوازن حركي
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('سحب فقرات وتخفيف ضغط (Traction)')">
+                            📏 سحب فقرات وتخفيف ضغط
+                        </button>
+                        <button type="button" class="btn btn-sm btn-modern-outline" onclick="toggleModality('كمادات حارة/باردة وتصريف لمفاوي')">
+                            ❄️ كمادات حرارية وثلجية
+                        </button>
+                    </div>
+
+                    <label asp-for="Modalities" class="form-label-modern">الأساليب المعتمدة للخطة</label>
+                    <textarea asp-for="Modalities" id="modalitiesField" rows="2" class="form-control form-control-modern fw-bold"></textarea>
+                </div>
+            </div>
+
+            <!-- Home Care, Medication & Exercises -->
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="width: 36px; height: 36px; background-color: #fee2e2; color: #dc2626;">
+                            <i class="bi bi-capsule"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0 text-dark">توجيهات الأدوية المساعدة والتمارين المنزلية</h6>
+                    </div>
+                </div>
+                <div class="card-modern-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="MedicationAndHomeCare" class="form-label-modern">إرشادات الأدوية المسكنة والمراهم والكمادات</label>
+                            <textarea asp-for="MedicationAndHomeCare" rows="4" class="form-control form-control-modern" placeholder="مثال: كمادات باردة 15 دقيقة بعد الجلسة، استخدام دهان مضاد للالتهاب قبل النوم، تجنب وضعية الجلوس أكثر من 45 دقيقة متواصلة..."></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="HomeExercises" class="form-label-modern">برنامج التمارين المنزلية الموصوفة (Home Exercises)</label>
+                            <textarea asp-for="HomeExercises" rows="4" class="form-control form-control-modern" placeholder="1. تمرين الإطالة 3 مجموعات × 15 ثانية ثبات&#10;2. تمرين الجسر لتقوية الحوض مرتين يومياً&#10;3. تمرين التنفس البطني لدعم عضلات الجذع"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-between align-items-center mb-5">
+                <a asp-action="Index" class="btn btn-modern btn-modern-outline px-4">رجوع</a>
+                <button type="submit" class="btn btn-modern btn-modern-primary px-5 py-3 fs-6">
+                    <i class="bi bi-check-circle-fill me-2"></i> اعتماد وتفعيل الخطة العلاجية &larr;
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleModality(text) {
+            const field = document.getElementById('modalitiesField');
+            if (field.value.includes(text)) {
+                field.value = field.value.replace(text, '').replace('، ،', '،').trim();
+            } else {
+                field.value = field.value ? field.value + '، ' + text : text;
+            }
+        }
+    </script>
+}

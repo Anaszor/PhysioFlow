@@ -1,0 +1,479 @@
+@model PhysioClinic.Models.ViewModels.NewIntakeViewModel
+@{
+    ViewData["Title"] = "استبيان تقييم الإصابة وتسجيل المريض";
+}
+
+<div class="row justify-content-center">
+    <div class="col-xl-11">
+        <!-- Page Title & Header -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-1 text-dark">استبيان تقييم الإصابة والحالة السريرية 📋</h3>
+                <p class="text-muted mb-0">تعبئة نموذج الحالة، تحديد موضع الألم تشريحياً، ومقياس الشدة قبل بدء الاستشارة.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-teal-subtle text-teal fw-bold px-3 py-2 rounded-pill" style="background-color: var(--primary-light); color: var(--primary-darker);">
+                    <i class="bi bi-shield-check me-1"></i> نموذج معتمد لتقييم العلاج الطبيعي
+                </span>
+            </div>
+        </div>
+
+        <!-- Wizard Steps Indicator -->
+        <div class="card-modern p-3 mb-4">
+            <div class="wizard-steps-bar">
+                <div class="wizard-step-item active" id="stepIndicator1">
+                    <div class="step-circle">1</div>
+                    <span class="step-label">بيانات المريض</span>
+                </div>
+                <div class="wizard-step-item" id="stepIndicator2">
+                    <div class="step-circle">2</div>
+                    <span class="step-label">خريطة موضع الألم</span>
+                </div>
+                <div class="wizard-step-item" id="stepIndicator3">
+                    <div class="step-circle">3</div>
+                    <span class="step-label">مقياس الشدة والأعراض</span>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="New" method="post" id="intakeForm">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
+
+            <!-- STEP 1: Patient Information -->
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="background-color: var(--primary-light); color: var(--primary-dark);">
+                            <i class="bi bi-person-bounding-box"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">الخطوة الأولى: تحديد هوية المراجع</h6>
+                            <small class="text-muted">تسجيل ملف جديد أو اختيار مريض مسجل مسبقاً</small>
+                        </div>
+                    </div>
+
+                    <div class="btn-group btn-group-sm p-1 bg-light rounded-pill border" role="group">
+                        <input type="radio" class="btn-check" name="clientMode" id="modeNew" autocomplete="off" checked onclick="toggleClientMode(true)">
+                        <label class="btn btn-sm rounded-pill px-3 fw-bold" for="modeNew">مريض جديد</label>
+
+                        <input type="radio" class="btn-check" name="clientMode" id="modeExisting" autocomplete="off" onclick="toggleClientMode(false)">
+                        <label class="btn btn-sm rounded-pill px-3 fw-bold" for="modeExisting">مريض مسجل مسبقاً</label>
+                    </div>
+                </div>
+
+                <div class="card-modern-body">
+                    <input type="hidden" asp-for="IsNewClient" id="isNewClientInput" />
+
+                    <!-- Existing Client Picker -->
+                    <div id="existingClientSection" style="display: none;" class="mb-3">
+                        <label class="form-label-modern">اختر ملف المريض من قاعدة البيانات</label>
+                        <select asp-for="ExistingClientId" class="form-select form-select-modern form-select-lg">
+                            <option value="">-- ابحث بالاسم أو رقم الهاتف --</option>
+                            @if (ViewBag.ClientsList != null)
+                            {
+                                foreach (var c in ViewBag.ClientsList)
+                                {
+                                    <option value="@c.Id">@c.FullName (@c.Phone)</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="ExistingClientId" class="text-danger small"></span>
+                    </div>
+
+                    <!-- New Client Form Fields -->
+                    <div id="newClientSection">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Client.FullName" class="form-label-modern">الاسم الكامل <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                    <input asp-for="Client.FullName" class="form-control form-control-modern border-start-0" placeholder="مثال: عبد الله ناصر السبيعي" />
+                                </div>
+                                <span asp-validation-for="Client.FullName" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Client.Phone" class="form-label-modern">رقم الجوال <span class="text-danger">*</span></label>
+                                <div class="input-group" dir="ltr">
+                                    <input asp-for="Client.Phone" class="form-control form-control-modern text-end border-end-0" placeholder="+966 5x xxx xxxx" />
+                                    <span class="input-group-text bg-white border-start-0"><i class="bi bi-telephone text-muted"></i></span>
+                                </div>
+                                <span asp-validation-for="Client.Phone" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="Client.Gender" class="form-label-modern">الجنس</label>
+                                <select asp-for="Client.Gender" class="form-select form-select-modern">
+                                    <option value="Male">ذكر</option>
+                                    <option value="Female">أنثى</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="Client.DateOfBirth" class="form-label-modern">تاريخ الميلاد</label>
+                                <input asp-for="Client.DateOfBirth" type="date" class="form-control form-control-modern" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="Client.Occupation" class="form-label-modern">المهنة / طبيعة النشاط اليومي</label>
+                                <input asp-for="Client.Occupation" class="form-control form-control-modern" placeholder="مثال: عمل مكتبي، رياضي، معلم" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Interactive Anatomical Body Map -->
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="background-color: #fee2e2; color: #dc2626;">
+                            <i class="bi bi-crosshair2"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">الخطوة الثانية: خريطة موضع الألم والإصابة</h6>
+                            <small class="text-muted">انقر على المنطقة التشريحية المصابة في الجسم</small>
+                        </div>
+                    </div>
+
+                    <div id="selectedPartBadge" class="badge px-3 py-2 fs-6 rounded-pill" style="background-color: var(--primary-light); color: var(--primary-darker); border: 1px solid rgba(13, 148, 136, 0.2);">
+                        <i class="bi bi-hand-index-thumb me-1"></i> لم يتم تحديد منطقة بعد
+                    </div>
+                </div>
+
+                <div class="card-modern-body">
+                    <input type="hidden" asp-for="Intake.BodyPart" id="bodyPartInput" />
+                    <span asp-validation-for="Intake.BodyPart" class="text-danger d-block mb-3 small"></span>
+
+                    <!-- Anatomical Category Tabs -->
+                    <ul class="segmented-tabs mb-4" id="anatomicalTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="spine-tab" type="button" onclick="switchAnatomicalTab('spine-zones', this)">
+                                🦴 العمود الفقري والرقبة
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="upper-tab" type="button" onclick="switchAnatomicalTab('upper-zones', this)">
+                                💪 الأطراف العلوية (الكتف واليد)
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="lower-tab" type="button" onclick="switchAnatomicalTab('lower-zones', this)">
+                                🦵 الأطراف السفلية (الركبة والكاحل)
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- 1. Spine & Neck Zones -->
+                        <div class="tab-pane fade show active" id="spine-zones">
+                            <div class="anatomical-zone-grid">
+                                <div class="anatomical-card" onclick="selectZoneCard('الفقرات العنقية والرقبة (Cervical Spine)', 'انزلاق غضروفي عنقي أو شد عضلات الرقبة', 'تنميل بالذراع، تيبس صباحي', this)">
+                                    <div class="zone-avatar"><i class="bi bi-shield"></i></div>
+                                    <div>
+                                        <div class="zone-title">الرقبة (Cervical)</div>
+                                        <div class="zone-desc">C1 - C7 فقرات عنقية وتصلب رقبة</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('أعلى الظهر والفقرات الصدرية (Thoracic)', 'تيبس عضلي وضعف التمدد الصدري', 'ألم بين لوحي الكتف، صعوبة نفس عميق', this)">
+                                    <div class="zone-avatar"><i class="bi bi-layers"></i></div>
+                                    <div>
+                                        <div class="zone-title">أعلى الظهر (Thoracic)</div>
+                                        <div class="zone-desc">بين لوحي الكتف والفقرات الصدرية</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('أسفل الظهر والفقرات القطنية (Lumbar Spine)', 'انزلاق غضروفي قطني (ديسك L4-S1) أو عرق النسا', 'ألم يمتد للساق، زيادة الألم مع الجلوس', this)">
+                                    <div class="zone-avatar"><i class="bi bi-fire text-danger"></i></div>
+                                    <div>
+                                        <div class="zone-title">أسفل الظهر (Lumbar / ديسك)</div>
+                                        <div class="zone-desc">الفقرات القطنية L1 - S1 وعرق النسا</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('المفصل العجزي الحرقفي (SI Joint)', 'التهاب أو عدم استقرار المفصل الحرقفي', 'ألم في المؤخرة وأعلى الفخذ عند الوقوف', this)">
+                                    <div class="zone-avatar"><i class="bi bi-diagram-3"></i></div>
+                                    <div>
+                                        <div class="zone-title">المفصل الحرقفي (SI Joint)</div>
+                                        <div class="zone-desc">المنطقة العجزية وجوانب الحوض</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Upper Extremities Zones -->
+                        <div class="tab-pane fade" id="upper-zones">
+                            <div class="anatomical-zone-grid">
+                                <div class="anatomical-card" onclick="selectZoneCard('الكتف الأيمن (Right Rotator Cuff)', 'التهاب أوتار الكفة المدورة أو تيبس الكتف المتجمد', 'ألم عند رفع الذراع، ألم ليلي يمنع النوم', this)">
+                                    <div class="zone-avatar"><i class="bi bi-bandaid"></i></div>
+                                    <div>
+                                        <div class="zone-title">الكتف الأيمن</div>
+                                        <div class="zone-desc">أوتار الكفة المدورة ومفصل الأخرم</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('الكتف الأيسر (Left Rotator Cuff)', 'التهاب أوتار أو اصطدام مفصل الكتف', 'ضعف العزم عند حمل الأشياء', this)">
+                                    <div class="zone-avatar"><i class="bi bi-bandaid"></i></div>
+                                    <div>
+                                        <div class="zone-title">الكتف الأيسر</div>
+                                        <div class="zone-desc">الكفة المدورة والوتر الرأسي</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('المرفق (Tennis / Golfer Elbow)', 'التهاب اللقيمة الوحشية أو الإنسية للمرفق', 'ألم عند مصافحة اليد أو حمل كوب', this)">
+                                    <div class="zone-avatar"><i class="bi bi-activity"></i></div>
+                                    <div>
+                                        <div class="zone-title">المرفق والساعد</div>
+                                        <div class="zone-desc">مرفق التنس والجولف والتهاب الأوتار</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('الرسغ واليد (Carpal Tunnel)', 'متلازمة النفق الرسغي أو التهاب وتر الإبهام', 'تنميل بالأصابع وضعف قبضة اليد', this)">
+                                    <div class="zone-avatar"><i class="bi bi-hand-index"></i></div>
+                                    <div>
+                                        <div class="zone-title">الرسغ واليد</div>
+                                        <div class="zone-desc">النفق الرسغي وأوتار De Quervain</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Lower Extremities Zones -->
+                        <div class="tab-pane fade" id="lower-zones">
+                            <div class="anatomical-zone-grid">
+                                <div class="anatomical-card" onclick="selectZoneCard('مفصل الحوض والورك (Hip Joint)', 'خشونة مفصل الورك أو متلازمة العضلة الكمثرية', 'ألم مع المشي وثني الفخذ للداخل', this)">
+                                    <div class="zone-avatar"><i class="bi bi-vinyl"></i></div>
+                                    <div>
+                                        <div class="zone-title">مفصل الحوض والورك (Hip)</div>
+                                        <div class="zone-desc">عضلة الورك والكمثرية والمحفظة</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('الركبة اليمنى (Right Knee)', 'تمزق أربطة (ACL/MCL) أو غضروف هلالي أو خشونة صابونة', 'تورم، طقطقة، عدم ثبات عند النزول', this)">
+                                    <div class="zone-avatar"><i class="bi bi-crosshair text-danger"></i></div>
+                                    <div>
+                                        <div class="zone-title">الركبة اليمنى</div>
+                                        <div class="zone-desc">الأربطة الصليبية والغضروف والصابونة</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('الركبة اليسرى (Left Knee)', 'تمزق أربطة أو متلازمة الألم الفخذي الرضفي', 'ألم حاد مع نزول الدرج أو الركوع', this)">
+                                    <div class="zone-avatar"><i class="bi bi-crosshair text-danger"></i></div>
+                                    <div>
+                                        <div class="zone-title">الركبة اليسرى</div>
+                                        <div class="zone-desc">الرباط الصليبي والغضاريف المفصلية</div>
+                                    </div>
+                                </div>
+
+                                <div class="anatomical-card" onclick="selectZoneCard('الكاحل والقدم (Ankle & Plantar Fascia)', 'التواء كاحل حاد أو شوكة عظمية والتهاب لفافة أخمصية', 'ألم مع الخطوات الأولى صباحاً', this)">
+                                    <div class="zone-avatar"><i class="bi bi-arrow-down-circle"></i></div>
+                                    <div>
+                                        <div class="zone-title">الكاحل والقدم</div>
+                                        <div class="zone-desc">أربطة الكاحل واللفافة الأخمصية وتر أكيليس</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Pain Scale & Clinical Details -->
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="background-color: #fef3c7; color: #b45309;">
+                            <i class="bi bi-speedometer2"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">الخطوة الثالثة: مقياس شدة الألم (VAS) وطبيعة الشكوى</h6>
+                            <small class="text-muted">مقياس التقييم البصري المعياري للآلام السريرية</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-modern-body">
+                    <!-- Interactive VAS Pain Box -->
+                    <div class="pain-meter-box mb-4">
+                        <div class="pain-grade-display" id="painGradeBox">
+                            <div>
+                                <span class="text-muted fw-bold d-block small">مستوى الألم المُبلغ عنه:</span>
+                                <span class="fw-bold fs-5" id="painGradeTitle">ألم متوسط مع حركة المفصل</span>
+                            </div>
+                            <div class="d-flex align-items-baseline gap-1">
+                                <span class="pain-grade-num text-warning" id="painGradeNum">5</span>
+                                <span class="text-muted fw-bold">/ 10</span>
+                            </div>
+                        </div>
+
+                        <div class="px-2 mb-3">
+                            <input type="range" class="pain-range-track" min="1" max="10" step="1" asp-for="Intake.PainLevel" id="painSlider" oninput="handlePainChange(this.value)">
+                            <div class="d-flex justify-content-between text-muted fw-bold px-1 mt-2 small">
+                                <span>1 خفيف جداً</span>
+                                <span>3</span>
+                                <span>5 متوسط</span>
+                                <span>7 حاد</span>
+                                <span>10 لا يطاق</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Intake.InjuryType" class="form-label-modern">التشخيص المبدئي أو تصنيف الإصابة</label>
+                            <input asp-for="Intake.InjuryType" id="injuryTypeInput" class="form-control form-control-modern" placeholder="انقر على منطقة الجسم لتعبئته تلقائياً أو اكتبه..." />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Intake.InjuryCause" class="form-label-modern">سبب الإصابة الرئيسي</label>
+                            <input asp-for="Intake.InjuryCause" class="form-control form-control-modern" placeholder="مثال: تمرين رياضي، حمل وزن ثقيل، جلوس متواصل..." />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Intake.OnsetDate" class="form-label-modern">تاريخ بداية ظهور الألم</label>
+                            <input asp-for="Intake.OnsetDate" type="date" class="form-control form-control-modern" />
+                        </div>
+
+                        <div class="col-md-8">
+                            <label asp-for="Intake.Symptoms" class="form-label-modern">الأعراض المصاحبة</label>
+                            <input asp-for="Intake.Symptoms" id="symptomsInput" class="form-control form-control-modern" placeholder="انقر على الوسوم السريعة بالأسفل..." />
+                            <div class="d-flex flex-wrap gap-1 mt-2">
+                                <span class="badge bg-light text-dark border cursor-pointer" onclick="appendSymptom('تنميل وخدر بالأطراف')">+ تنميل وخدر</span>
+                                <span class="badge bg-light text-dark border cursor-pointer" onclick="appendSymptom('تيبس صباحي بالمفصل')">+ تيبس صباحي</span>
+                                <span class="badge bg-light text-dark border cursor-pointer" onclick="appendSymptom('وخز كهربائي حارق')">+ وخز كهربائي</span>
+                                <span class="badge bg-light text-dark border cursor-pointer" onclick="appendSymptom('صعوبة في الوقوف أو المشي')">+ صعوبة حركة</span>
+                                <span class="badge bg-light text-dark border cursor-pointer" onclick="appendSymptom('تورم وسخونة موضعية')">+ تورم وسخونة</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Intake.PainDescription" class="form-label-modern">طبيعة الألم وصفته الدقيقة</label>
+                            <input asp-for="Intake.PainDescription" class="form-control form-control-modern" placeholder="مثال: ألم نابض يزداد مع الانحناء، متقطع، حاد..." />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Intake.MedicalHistoryFlags" class="form-label-modern">التاريخ الصحي والعمليات السابقة</label>
+                            <input asp-for="Intake.MedicalHistoryFlags" class="form-control form-control-modern" placeholder="مثال: ضغط، سكري، عمليات بالعمود الفقري، شرائح ومسامير..." />
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch p-3 bg-light rounded-3 border">
+                                <input class="form-check-input ms-2" type="checkbox" asp-for="Intake.HasRadiologyReports" id="hasRadioCheck">
+                                <label class="form-check-label fw-bold text-dark" for="hasRadioCheck">
+                                    المريض يملك تقارير أو صور رنين مغناطيسي (MRI) أو أشعة سينية (X-Ray) جاهزة للعرض
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button Bar -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-5">
+                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-modern btn-modern-outline px-4">
+                    إلغاء والعودة
+                </a>
+                <button type="submit" class="btn btn-modern btn-modern-primary px-5 py-3 fs-6">
+                    <i class="bi bi-save2 me-2"></i> حفظ استبيان المريض والبدء بالاستشارة الطبية &larr;
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleClientMode(isNew) {
+            document.getElementById('isNewClientInput').value = isNew;
+            document.getElementById('newClientSection').style.display = isNew ? 'block' : 'none';
+            document.getElementById('existingClientSection').style.display = isNew ? 'none' : 'block';
+        }
+
+        function switchAnatomicalTab(targetId, btnElement) {
+            // Update active button state
+            document.querySelectorAll('#anatomicalTabs .nav-link').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            // Switch visible panel
+            document.querySelectorAll('#spine-zones, #upper-zones, #lower-zones').forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+            const targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        }
+
+        function selectZoneCard(zoneName, defaultInjury, defaultSymptoms, cardElement) {
+            document.getElementById('bodyPartInput').value = zoneName;
+
+            // Highlight card
+            document.querySelectorAll('.anatomical-card').forEach(c => c.classList.remove('selected'));
+            cardElement.classList.add('selected');
+
+            // Update badge indicator
+            const badge = document.getElementById('selectedPartBadge');
+            badge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> الموضع: <strong>${zoneName}</strong>`;
+            badge.style.backgroundColor = '#ccfbf1';
+            badge.style.color = '#0f766e';
+
+            // Auto-suggest injury type and symptoms if empty
+            const injuryInput = document.getElementById('injuryTypeInput');
+            if (!injuryInput.value || injuryInput.value.length === 0) {
+                injuryInput.value = defaultInjury;
+            }
+
+            const symptomsInput = document.getElementById('symptomsInput');
+            if (!symptomsInput.value || symptomsInput.value.length === 0) {
+                symptomsInput.value = defaultSymptoms;
+            }
+
+            // Mark wizard step 2 as active/completed
+            document.getElementById('stepIndicator2').classList.add('completed');
+            document.getElementById('stepIndicator3').classList.add('active');
+        }
+
+        function handlePainChange(val) {
+            const numEl = document.getElementById('painGradeNum');
+            const titleEl = document.getElementById('painGradeTitle');
+            const boxEl = document.getElementById('painGradeBox');
+
+            numEl.innerText = val;
+
+            if (val <= 3) {
+                titleEl.innerText = "ألم خفيف ومحتمل (Mild Pain)";
+                numEl.className = "pain-grade-num text-success";
+                boxEl.style.backgroundColor = "#ecfdf5";
+                boxEl.style.borderColor = "#a7f3d0";
+            } else if (val <= 6) {
+                titleEl.innerText = "ألم متوسط يؤثر على بعض الحركات (Moderate Pain)";
+                numEl.className = "pain-grade-num text-warning";
+                boxEl.style.backgroundColor = "#fefce8";
+                boxEl.style.borderColor = "#fef08a";
+            } else if (val <= 8) {
+                titleEl.innerText = "ألم حاد يعيق النشاط اليومي (Severe Pain)";
+                numEl.className = "pain-grade-num text-danger";
+                boxEl.style.backgroundColor = "#fff1f2";
+                boxEl.style.borderColor = "#fecdd3";
+            } else {
+                titleEl.innerText = "ألم مبرح وشديد جداً لا يطاق (Very Severe)";
+                numEl.className = "pain-grade-num text-danger fw-bolder";
+                boxEl.style.backgroundColor = "#ffe4e6";
+                boxEl.style.borderColor = "#fda4af";
+            }
+        }
+
+        function appendSymptom(text) {
+            const input = document.getElementById('symptomsInput');
+            if (input.value.length > 0) {
+                if (!input.value.includes(text)) {
+                    input.value += '، ' + text;
+                }
+            } else {
+                input.value = text;
+            }
+        }
+    </script>
+}

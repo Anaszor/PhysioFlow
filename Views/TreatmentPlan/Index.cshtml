@@ -1,0 +1,132 @@
+@using PhysioClinic.Models
+@model IEnumerable<PhysioClinic.Models.TreatmentPlan>
+@{
+    ViewData["Title"] = "الخطط العلاجية والتأهيلية";
+}
+
+<!-- Page Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">برامج وخطط العلاج الطبيعي 🩺</h3>
+        <p class="text-muted mb-0">متابعة سير الجلسات المقررة، أساليب العلاج، ونسبة تقدم شفاء المرضى.</p>
+    </div>
+
+    @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
+    {
+        <a asp-action="Create" class="btn btn-modern btn-modern-primary">
+            <i class="bi bi-plus-circle-fill me-1"></i>
+            <span>خطة علاجية جديدة</span>
+        </a>
+    }
+</div>
+
+<!-- Filter Tabs -->
+<div class="d-flex gap-2 mb-4 overflow-auto pb-1">
+    <a asp-action="Index" class="btn btn-sm @(string.IsNullOrEmpty(ViewBag.CurrentStatus) ? "btn-modern-primary" : "btn-modern-outline") rounded-pill px-3">
+        جميع الخطط (@Model.Count())
+    </a>
+    <a asp-action="Index" asp-route-status="Active" class="btn btn-sm @(ViewBag.CurrentStatus == "Active" ? "btn-modern-primary" : "btn-modern-outline") rounded-pill px-3">
+        قيد التنفيذ النشطة (@Model.Count(p => p.Status == "Active"))
+    </a>
+    <a asp-action="Index" asp-route-status="Completed" class="btn btn-sm @(ViewBag.CurrentStatus == "Completed" ? "btn-modern-primary" : "btn-modern-outline") rounded-pill px-3">
+        البرامج المكتملة (@Model.Count(p => p.Status == "Completed"))
+    </a>
+</div>
+
+<!-- Treatment Plans Cards Grid -->
+<div class="row g-4">
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center py-5">
+            <div class="zone-avatar mx-auto mb-3" style="width: 64px; height: 64px; background-color: var(--slate-100); color: var(--slate-400); font-size: 2rem;">
+                <i class="bi bi-journal-medical"></i>
+            </div>
+            <h5 class="fw-bold text-dark mt-2">لا توجد خطط علاجية مسجلة حالياً</h5>
+            <a asp-action="Create" class="btn btn-modern btn-modern-primary mt-2">إنشاء أول خطة علاج</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var plan in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card-modern h-100 d-flex flex-column">
+                    <div class="card-modern-header d-flex justify-content-between align-items-start">
+                        <div>
+                            @if (plan.Status == "Active")
+                            {
+                                <span class="badge-status badge-status-confirmed mb-2 d-inline-block">جاري التنفيذ</span>
+                            }
+                            else if (plan.Status == "Completed")
+                            {
+                                <span class="badge-status badge-status-completed mb-2 d-inline-block">برنامج مكتمل</span>
+                            }
+                            <h5 class="fw-bold mb-1">
+                                <a asp-action="Details" asp-route-id="@plan.Id" class="text-decoration-none text-dark">
+                                    @plan.Title
+                                </a>
+                            </h5>
+                        </div>
+                        <span class="badge bg-teal-subtle text-teal fw-bold fs-6 px-3 py-1 rounded-pill" style="background-color: var(--primary-light); color: var(--primary-darker);">
+                            @plan.ProgressPercentage%
+                        </span>
+                    </div>
+
+                    <div class="card-modern-body flex-grow-1">
+                        <div class="mb-3">
+                            <span class="text-muted small d-block">المريض المستفيد:</span>
+                            <a asp-controller="Clients" asp-action="Details" asp-route-id="@plan.ClientId" class="fw-bold text-dark text-decoration-none fs-6">
+                                <i class="bi bi-person me-1 text-primary"></i> @plan.Client?.FullName
+                            </a>
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="text-muted small d-block">الأخصائي المشرف:</span>
+                            <span class="badge rounded-pill" style="background-color: @(plan.Therapist?.ColorTag ?? "#0d9488")15; color: @(plan.Therapist?.ColorTag ?? "#0d9488"); border: 1px solid @(plan.Therapist?.ColorTag ?? "#0d9488")30; font-weight: 600;">
+                                @plan.Therapist?.FullName
+                            </span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>التقدم: @plan.CompletedSessions من أصل @plan.TotalSessions جلسة</span>
+                                <span>@(plan.TotalSessions - plan.CompletedSessions) متبقية</span>
+                            </div>
+                            <div class="progress" style="height: 8px; border-radius: 9999px;">
+                                <div class="progress-bar" role="progressbar" style="width: @plan.ProgressPercentage%; background: var(--primary-gradient);"></div>
+                            </div>
+                        </div>
+
+                        <!-- Modalities Chips -->
+                        <div class="mb-2">
+                            <span class="text-muted small d-block mb-1">الأساليب المعتمدة:</span>
+                            <div>
+                                @foreach (var mod in (plan.Modalities ?? "").Split('،', StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <span class="badge bg-light text-dark border me-1 mb-1 p-2">@mod.Trim()</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-modern-header bg-light d-flex justify-content-between align-items-center p-3">
+                        @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+                        {
+                            <a asp-controller="Appointments" asp-action="Book" asp-route-clientId="@plan.ClientId" class="btn btn-sm btn-modern btn-modern-outline">
+                                <i class="bi bi-calendar-plus me-1"></i> حجز جلسة
+                            </a>
+                        }
+                        else
+                        {
+                            <span></span>
+                        }
+                        <a asp-action="Details" asp-route-id="@plan.Id" class="btn btn-sm btn-modern btn-modern-primary">
+                            التفاصيل <i class="bi bi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

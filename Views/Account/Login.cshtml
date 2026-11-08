@@ -1,0 +1,218 @@
+@model PhysioClinic.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "تسجيل الدخول";
+    Layout = null; // Clean dedicated full-page auth layout
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تسجيل الدخول - فيزيو فلو | PhysioFlow Clinic</title>
+
+    <!-- Local Bootstrap 5.3 RTL CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    <!-- Local Bootstrap Icons -->
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <!-- PhysioFlow Modern Design System -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #e0f2fe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .auth-card {
+            background: #ffffff;
+            border-radius: 1.25rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.1);
+            padding: 2.25rem;
+        }
+
+        .auth-brand-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 1rem;
+            background: var(--primary-gradient);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.85rem;
+            box-shadow: 0 10px 20px rgba(13, 148, 136, 0.3);
+            margin: 0 auto 1.25rem auto;
+        }
+
+        .demo-account-pill {
+            background-color: var(--slate-50);
+            border: 1px dashed var(--slate-300);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .demo-account-pill:hover {
+            border-color: var(--primary);
+            background-color: var(--primary-subtle);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Brand Logo Header -->
+        <div class="text-center mb-4">
+            <div class="auth-brand-icon">
+                <i class="bi bi-activity"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-dark">Physio<span style="color: var(--primary);">Flow</span></h3>
+            <p class="text-muted small">نظام إدارة عيادات العلاج الطبيعي والتأهيل السريري</p>
+        </div>
+
+        <!-- Main Login Card -->
+        <div class="auth-card">
+            <div class="mb-4 text-center">
+                <h5 class="fw-bold text-dark mb-1">تسجيل دخول الطاقم الطبي</h5>
+                <span class="text-muted small">أدخل بريدك الإلكتروني وكلمة المرور للوصول للنظام</span>
+            </div>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success d-flex align-items-center gap-2 py-2 small mb-3 rounded-3">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <div>@TempData["SuccessMessage"]</div>
+                </div>
+            }
+
+            <form asp-action="Login" method="post" id="loginForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="ReturnUrl" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-3 rounded-3"></div>
+
+                <!-- Email Field -->
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label-modern small">البريد الإلكتروني المهني</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" id="emailInput" class="form-control form-control-modern border-start-0" placeholder="name@physioflow.com" autocomplete="email" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <!-- Password Field -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label asp-for="Password" class="form-label-modern small mb-0">كلمة المرور</label>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-shield-lock"></i></span>
+                        <input asp-for="Password" id="passwordInput" type="password" class="form-control form-control-modern border-start-0" placeholder="••••••••" autocomplete="current-password" />
+                        <button class="btn btn-outline-secondary border-start-0 border-end-0 bg-white text-muted" type="button" onclick="togglePasswordVisibility()">
+                            <i class="bi bi-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <!-- Remember Me & Policy Note -->
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" asp-for="RememberMe" id="rememberMeCheck" />
+                        <label class="form-check-label text-muted small" for="rememberMeCheck">
+                            تذكرني على هذا الجهاز
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-modern btn-modern-primary w-100 py-2 fs-6">
+                    <i class="bi bi-box-arrow-in-left me-1"></i> تسجيل الدخول
+                </button>
+            </form>
+
+            <hr class="my-4 text-muted" />
+
+            <!-- One-Click Quick Role Switcher for Instant Testing -->
+            <div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold small text-dark"><i class="bi bi-key-fill text-warning me-1"></i> تجربة سريعة للأدوار (Demo):</span>
+                    <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">انقر للتعبئة الفورية</span>
+                </div>
+
+                <div class="d-flex flex-column gap-2">
+                    <div class="demo-account-pill d-flex align-items-center justify-content-between" onclick="fillCredentials('admin@physioflow.com', 'Admin@123')">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-purple text-white rounded-pill px-2 py-1" style="background-color: #6366f1;">Admin</span>
+                            <span class="small fw-bold text-dark">مدير النظام (كامل الصلاحيات)</span>
+                        </div>
+                        <i class="bi bi-arrow-left text-muted"></i>
+                    </div>
+
+                    <div class="demo-account-pill d-flex align-items-center justify-content-between" onclick="fillCredentials('firas@physioflow.com', 'Doctor@123')">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge text-white rounded-pill px-2 py-1" style="background-color: #0d9488;">Doctor</span>
+                            <span class="small fw-bold text-dark">أخصائي معالج (فحص، خطط، إنجاز)</span>
+                        </div>
+                        <i class="bi bi-arrow-left text-muted"></i>
+                    </div>
+
+                    <div class="demo-account-pill d-flex align-items-center justify-content-between" onclick="fillCredentials('reception@physioflow.com', 'Recep@123')">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge text-white rounded-pill px-2 py-1" style="background-color: #0284c7;">Receptionist</span>
+                            <span class="small fw-bold text-dark">موظف استقبال (حجز وتقييم أولي)</span>
+                        </div>
+                        <i class="bi bi-arrow-left text-muted"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Login Notice -->
+            <div class="mt-4 p-3 rounded-3 bg-light border text-center">
+                <div class="small text-muted">
+                    <i class="bi bi-info-circle text-primary me-1"></i>
+                    <strong>سجلات المرضى:</strong>
+                    المرضى لا يمتلكون حسابات دخول، وتتم إدارتهم ومتابعة برامجهم من قِبل الطاقم الطبي والاستقبال مباشرة.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Local Bootstrap JS Bundle -->
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function fillCredentials(email, password) {
+            document.getElementById('emailInput').value = email;
+            document.getElementById('passwordInput').value = password;
+        }
+
+        function togglePasswordVisibility() {
+            const pwd = document.getElementById('passwordInput');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                pwd.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+    </script>
+</body>
+</html>
