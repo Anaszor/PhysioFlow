@@ -27,3 +27,11 @@ Desktop.ini
 $RECYCLE.BIN/
 *.tmp
 *.log
+
+## Environment Variables & Secrets
+.env
+.env.*
+*.local
+appsettings.local.json
+appsettings.*.local.json
+appsettings.Production.json

@@ -2,11 +2,19 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PhysioClinic.Data;
 using PhysioClinic.Models;
+using PhysioClinic.Services.WhatsApp;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load optional local settings (git-ignored for secrets)
+builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Configure WhatsApp Automation Service
+builder.Services.Configure<WhatsAppSettings>(builder.Configuration.GetSection("WhatsApp"));
+builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
 
 // Configure Database (PostgreSQL or SQLite fallback for instant local preview)
 var provider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";
@@ -76,10 +84,9 @@ using (var scope = app.Services.CreateScope())
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();

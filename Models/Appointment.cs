@@ -49,6 +49,18 @@ namespace PhysioClinic.Models
         [Display(Name = "الأساليب والتقنيات المنفذة في الجلسة")]
         public string? TechniquesUsed { get; set; }
 
+        [Display(Name = "استجابة المريض وتحمله للتمارين")]
+        public string? PatientResponse { get; set; }
+
+        [Display(Name = "الملاحظات السريرية المفصلة")]
+        public string? ClinicalNotes { get; set; }
+
+        [Display(Name = "التوصيات والتمارين المنزلية حتى الجلسة القادمة")]
+        public string? NextSessionPlan { get; set; }
+
+        [Display(Name = "توقيع المريض")]
+        public string? PatientSignature { get; set; }
+
         [Display(Name = "اسم الطبيب / الأخصائي الموثق للجلسة")]
         public string? CompletedByDoctorName { get; set; }
 

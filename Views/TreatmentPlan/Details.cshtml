@@ -200,7 +200,15 @@
                                         <span class="badge-status badge-status-scheduled">@appt.Status</span>
                                     }
                                 </td>
-                                <td class="small text-muted">@(appt.SessionNotes ?? "-")</td>
+                                <td class="small text-muted">
+                                    @(appt.SessionNotes ?? "-")
+                                    @if (appt.Status == "Completed")
+                                    {
+                                        <a asp-controller="Appointments" asp-action="SessionReport" asp-route-id="@appt.Id" target="_blank" class="badge bg-light text-danger border ms-2 text-decoration-none" title="طباعة أو تحميل تقرير الجلسة">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> تقرير PDF
+                                        </a>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>

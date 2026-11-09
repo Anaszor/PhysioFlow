@@ -174,6 +174,12 @@
                                             <i class="bi bi-pen me-1"></i> د. @appt.CompletedByDoctorName
                                         </small>
                                     }
+                                    @if (!string.IsNullOrEmpty(appt.PatientSignature))
+                                    {
+                                        <small class="text-success d-block fw-semibold mt-1" style="font-size: 0.72rem;">
+                                            <i class="bi bi-pen-fill me-1"></i> توقيع المريض: موثق إلكترونياً
+                                        </small>
+                                    }
                                 </td>
                                 <td class="text-start">
                                     <div class="d-flex align-items-center gap-1 justify-content-end">
@@ -181,17 +187,20 @@
                                         @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
                                         {
                                             @if (appt.Status != "Completed")
-                                            {
-                                                <button type="button" class="btn btn-sm btn-modern btn-modern-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="توثيق الجلسة وكتابة تقرير التطور">
-                                                    <i class="bi bi-file-earmark-medical me-1"></i> توثيق الجلسة
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <button type="button" class="btn btn-sm btn-light border py-1 px-2 text-success" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="عرض / تعديل التوثيق">
-                                                    <i class="bi bi-check2-circle me-1"></i> التقرير
-                                                </button>
-                                            }
+                                             {
+                                                 <button type="button" class="btn btn-sm btn-modern btn-modern-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="توثيق الجلسة وكتابة تقرير التطور">
+                                                     <i class="bi bi-file-earmark-medical me-1"></i> توثيق الجلسة
+                                                 </button>
+                                             }
+                                             else
+                                             {
+                                                 <button type="button" class="btn btn-sm btn-light border py-1 px-2 text-success" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="عرض / تعديل التوثيق">
+                                                     <i class="bi bi-check2-circle me-1"></i> التقرير
+                                                 </button>
+                                                 <a asp-action="SessionReport" asp-route-id="@appt.Id" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-2" title="طباعة أو تحميل تقرير الجلسة بصيغة PDF">
+                                                     <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                                                 </a>
+                                             }
                                         }
 
                                         <!-- RECEPTIONIST & ADMIN ACTION: Confirm Attendance & Cancel -->
@@ -204,6 +213,14 @@
                                                     <input type="hidden" name="id" value="@appt.Id" />
                                                     <button type="submit" class="btn btn-sm btn-outline-primary py-1 px-2" title="تأكيد وصول المريض بالاستقبال">
                                                         <i class="bi bi-person-check me-1"></i> وصل
+                                                    </button>
+                                                </form>
+
+                                                <form asp-action="SendReminder" method="post" class="d-inline m-0" onsubmit="return confirm('هل تريد إرسال رسالة تذكير بالموعد للمريض عبر واتساب؟');">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@appt.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2" title="إرسال تذكير واتساب للمريض">
+                                                        <i class="bi bi-whatsapp"></i>
                                                     </button>
                                                 </form>
 
@@ -225,33 +242,34 @@
                             {
                                 <div class="modal fade" id="sessionModal-@appt.Id" tabindex="-1" aria-labelledby="modalLabel-@appt.Id" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered modal-lg">
-                                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem;">
-                                            <div class="modal-header border-bottom py-3" style="background-color: var(--primary-light);">
+                                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; overflow: hidden;">
+                                            <!-- Modal Header with Fixed X Position -->
+                                            <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <div class="zone-avatar" style="width: 38px; height: 38px; background: var(--primary); color: #fff;">
-                                                        <i class="bi bi-clipboard2-pulse"></i>
+                                                    <div class="zone-avatar" style="width: 38px; height: 38px; background: var(--primary); color: #fff; border-radius: 10px;">
+                                                        <i class="bi bi-clipboard2-pulse fs-5"></i>
                                                     </div>
                                                     <div>
                                                         <h6 class="modal-title fw-bold text-dark mb-0" id="modalLabel-@appt.Id">نموذج توثيق ما بعد الجلسة (خاص بالطبيب المعالج)</h6>
                                                         <small class="text-muted">المريض: <strong>@appt.Client?.FullName</strong> | @(appt.TreatmentPlan != null ? appt.TreatmentPlan.Title : "جلسة استشارة وتقييم")</small>
                                                     </div>
                                                 </div>
-                                                <button type="button" class="btn-close me-auto ms-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
                                             </div>
 
-                                            <form asp-action="CompleteSession" method="post">
+                                            <form asp-action="CompleteSession" method="post" id="form-session-@appt.Id">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@appt.Id" />
 
-                                                <div class="modal-body p-4">
+                                                <div class="modal-body p-4" style="max-height: calc(85vh - 140px); overflow-y: auto;">
                                                     <!-- Pain level after session -->
                                                     <div class="mb-3">
                                                         <label class="form-label-modern fw-bold mb-1">
                                                             مستوى الألم بعد إتمام الجلسة (VAS Pain Scale 1-10)
                                                         </label>
                                                         <div class="d-flex align-items-center gap-3">
-                                                            <input type="range" class="form-range flex-grow-1" min="1" max="10" name="painLevelAfter" id="painRange-@appt.Id" value="@(appt.PainLevelAfter ?? 3)" oninput="document.getElementById('painVal-@appt.Id').innerText = this.value" />
-                                                            <span class="badge bg-teal fs-6 px-3 py-2 rounded-pill" style="background-color: var(--primary);" id="painVal-@appt.Id">@(appt.PainLevelAfter ?? 3) / 10</span>
+                                                            <input type="range" class="form-range flex-grow-1" min="1" max="10" name="painLevelAfter" id="painRange-@appt.Id" value="@(appt.PainLevelAfter ?? 3)" oninput="document.getElementById('painVal-@appt.Id').innerText = this.value + ' / 10'" />
+                                                            <span class="badge bg-teal fs-6 px-3 py-2 rounded-pill text-white" style="background-color: var(--primary);" id="painVal-@appt.Id">@(appt.PainLevelAfter ?? 3) / 10</span>
                                                         </div>
                                                         <small class="text-muted">1-3 ألم خفيف محتمل، 4-6 ألم متوسط، 7-10 ألم شديد.</small>
                                                     </div>
@@ -265,27 +283,83 @@
                                                     <!-- Patient Response -->
                                                     <div class="mb-3">
                                                         <label class="form-label-modern fw-bold mb-1">استجابة المريض وتحمله للتمارين (Patient Response)</label>
-                                                        <input type="text" name="patientResponse" class="form-control form-control-modern" placeholder="مثال: تحسن في المدى الحركي بنسبة 20%، خفة في الحركة دون تنميل" />
+                                                        <input type="text" name="patientResponse" class="form-control form-control-modern" value="@(appt.PatientResponse ?? "")" placeholder="مثال: تحسن في المدى الحركي بنسبة 20%، خفة في الحركة دون تنميل" />
                                                     </div>
 
                                                     <!-- Clinical Progress Notes -->
                                                     <div class="mb-3">
                                                         <label class="form-label-modern fw-bold mb-1">الملاحظات السريرية المفصلة وتوجيهات الطبيب</label>
-                                                        <textarea name="clinicalNotes" rows="3" class="form-control form-control-modern" placeholder="وثّق ملاحظاتك الطبية حول حالة المريض وتطورها...">@appt.SessionNotes</textarea>
+                                                        <textarea name="clinicalNotes" rows="3" class="form-control form-control-modern" placeholder="وثّق ملاحظاتك الطبية حول حالة المريض وتطورها...">@(appt.ClinicalNotes ?? appt.SessionNotes)</textarea>
                                                     </div>
 
                                                     <!-- Next Session Recommendations -->
-                                                    <div>
+                                                    <div class="mb-3">
                                                         <label class="form-label-modern fw-bold mb-1">التوصيات والتمارين المنزلية حتى الجلسة القادمة</label>
-                                                        <input type="text" name="nextSessionPlan" class="form-control form-control-modern" placeholder="مثال: الاستمرار على تمرين مكينزي 3 مرات يومياً والكمادات الباردة" />
+                                                        <input type="text" name="nextSessionPlan" class="form-control form-control-modern" value="@(appt.NextSessionPlan ?? "")" placeholder="مثال: الاستمرار على تمرين مكينزي 3 مرات يومياً والكمادات الباردة" />
+                                                    </div>
+
+                                                    <!-- Patient Signature Section -->
+                                                    <div class="mb-2">
+                                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                                            <label class="form-label-modern fw-bold mb-0">
+                                                                <i class="bi bi-pen me-1 text-primary"></i> توقيع المريض (Patient Signature)
+                                                            </label>
+                                                            <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0 fw-semibold" onclick="clearSignaturePad(@appt.Id)">
+                                                                <i class="bi bi-eraser me-1"></i> مسح التوقيع
+                                                            </button>
+                                                        </div>
+                                                        <small class="text-muted d-block mb-2">يرجى من المريض أو ولي أمره التوقيع في المربع أدناه (باللمس أو الفأرة) لتأكيد إتمام الجلسة واستلام التوجيهات:</small>
+                                                        
+                                                        <div class="signature-box-wrapper position-relative rounded-3 p-2 bg-light border" style="border: 2px dashed #94a3b8 !important; min-height: 140px;">
+                                                            @if (!string.IsNullOrEmpty(appt.PatientSignature))
+                                                            {
+                                                                <div id="sigPreviewContainer-@appt.Id" class="text-center py-2">
+                                                                    <img src="@appt.PatientSignature" alt="توقيع المريض" style="max-height: 100px; max-width: 100%; object-fit: contain;" />
+                                                                    <div class="text-muted small mt-2 d-flex align-items-center justify-content-center gap-2">
+                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                                            <i class="bi bi-check-circle-fill me-1"></i> توقيع إلكتروني محفوظ
+                                                                        </span>
+                                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="enableReSign(@appt.Id)">
+                                                                            <i class="bi bi-arrow-repeat me-1"></i> إعادة التوقيع
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div id="sigCanvasWrapper-@appt.Id" class="d-none position-relative">
+                                                                    <canvas id="sigCanvas-@appt.Id" class="w-100 bg-white rounded border" height="130" style="cursor: crosshair; touch-action: none;"></canvas>
+                                                                    <div id="sigPlaceholder-@appt.Id" class="position-absolute top-50 start-50 translate-middle text-muted" style="pointer-events: none; opacity: 0.35;">
+                                                                        <i class="bi bi-pen me-1"></i> وقع هنا (Sign Here)
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <div id="sigCanvasWrapper-@appt.Id" class="position-relative">
+                                                                    <canvas id="sigCanvas-@appt.Id" class="w-100 bg-white rounded border" height="130" style="cursor: crosshair; touch-action: none;"></canvas>
+                                                                    <div id="sigPlaceholder-@appt.Id" class="position-absolute top-50 start-50 translate-middle text-muted" style="pointer-events: none; opacity: 0.35;">
+                                                                        <i class="bi bi-pen me-1"></i> وقع هنا (Sign Here)
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            <input type="hidden" name="patientSignature" id="sigInput-@appt.Id" value="@appt.PatientSignature" />
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div class="modal-footer border-top bg-light p-3">
-                                                    <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
-                                                    <button type="submit" class="btn btn-modern btn-modern-primary px-4">
-                                                        <i class="bi bi-check2-circle me-1"></i> اعتماد التقرير وإتمام الجلسة
-                                                    </button>
+                                                <div class="modal-footer border-top bg-light p-3 d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        @if (appt.Status == "Completed")
+                                                        {
+                                                            <a href="@Url.Action("SessionReport", "Appointments", new { id = appt.Id })" target="_blank" class="btn btn-modern btn-outline-danger">
+                                                                <i class="bi bi-file-earmark-pdf me-1"></i> طباعة / تحميل PDF
+                                                            </a>
+                                                        }
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
+                                                        <button type="submit" class="btn btn-modern btn-modern-primary px-4">
+                                                            <i class="bi bi-check2-circle me-1"></i> اعتماد التقرير وإتمام الجلسة
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </form>
                                         </div>
@@ -299,3 +373,161 @@
         }
     </div>
 </div>
+
+@section Scripts {
+<script>
+    // Digital Signature Pad Management
+    const signaturePads = {};
+
+    function initSignaturePad(apptId) {
+        const canvas = document.getElementById('sigCanvas-' + apptId);
+        if (!canvas) return;
+
+        // Set internal resolution based on visible width
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0) {
+            canvas.width = rect.width;
+            canvas.height = 130;
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let hasStroke = false;
+
+        function getPos(e) {
+            const r = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - r.left,
+                y: clientY - r.top
+            };
+        }
+
+        function startDrawing(e) {
+            if (e.cancelable && e.touches) e.preventDefault();
+            isDrawing = true;
+            hasStroke = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+
+            // Hide placeholder text on first draw
+            const ph = document.getElementById('sigPlaceholder-' + apptId);
+            if (ph) ph.style.display = 'none';
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            if (e.cancelable && e.touches) e.preventDefault();
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                const input = document.getElementById('sigInput-' + apptId);
+                if (input && hasStroke) {
+                    input.value = canvas.toDataURL('image/png');
+                }
+            }
+        }
+
+        if (!canvas.dataset.initialized) {
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            window.addEventListener('mouseup', stopDrawing);
+
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            window.addEventListener('touchend', stopDrawing);
+
+            canvas.dataset.initialized = 'true';
+        }
+
+        signaturePads[apptId] = {
+            canvas: canvas,
+            ctx: ctx,
+            clear: function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasStroke = false;
+            }
+        };
+    }
+
+    function clearSignaturePad(apptId) {
+        const input = document.getElementById('sigInput-' + apptId);
+        if (input) input.value = '';
+
+        const preview = document.getElementById('sigPreviewContainer-' + apptId);
+        if (preview) preview.classList.add('d-none');
+
+        const wrapper = document.getElementById('sigCanvasWrapper-' + apptId);
+        if (wrapper) wrapper.classList.remove('d-none');
+
+        const ph = document.getElementById('sigPlaceholder-' + apptId);
+        if (ph) ph.style.display = 'block';
+
+        initSignaturePad(apptId);
+        if (signaturePads[apptId]) {
+            signaturePads[apptId].clear();
+        }
+    }
+
+    function enableReSign(apptId) {
+        clearSignaturePad(apptId);
+    }
+
+    // Modal lifecycle handling
+    document.addEventListener('DOMContentLoaded', function () {
+        const modals = document.querySelectorAll('[id^="sessionModal-"]');
+        modals.forEach(modal => {
+            modal.addEventListener('shown.bs.modal', function () {
+                const apptId = this.id.replace('sessionModal-', '');
+                initSignaturePad(apptId);
+            });
+
+            // Ensure canvas data is saved on form submit
+            const form = modal.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    const apptId = modal.id.replace('sessionModal-', '');
+                    const canvas = document.getElementById('sigCanvas-' + apptId);
+                    const input = document.getElementById('sigInput-' + apptId);
+                    const wrapper = document.getElementById('sigCanvasWrapper-' + apptId);
+
+                    if (canvas && input && wrapper && !wrapper.classList.contains('d-none')) {
+                        const ctx = canvas.getContext('2d');
+                        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                        let drawn = false;
+                        for (let i = 3; i < data.length; i += 4) {
+                            if (data[i] > 0) {
+                                drawn = true;
+                                break;
+                            }
+                        }
+                        if (drawn) {
+                            input.value = canvas.toDataURL('image/png');
+                        }
+                    }
+                });
+            }
+        });
+    });
+</script>
+}
