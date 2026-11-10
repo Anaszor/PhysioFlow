@@ -92,112 +92,98 @@
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table-modern">
+            <div class="table-responsive appointments-table-container">
+                <table class="table-modern table-appointments">
                     <thead>
                         <tr>
-                            <th>الوقت المخصص</th>
+                            <th style="width: 125px;">الوقت</th>
                             <th>المريض</th>
-                            <th>الأخصائي المعالج</th>
+                            <th>الأخصائي</th>
                             <th>البرنامج العلاجي</th>
-                            <th>الحالة</th>
-                            <th>التقرير والملاحظات</th>
-                            <th class="text-start" style="min-width: 250px;">الإجراءات</th>
+                            <th>الحالة والتوثيق</th>
+                            <th class="text-start" style="width: 190px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var appt in Model)
                         {
                             <tr>
-                                <td>
-                                    <div class="fw-bold text-dark font-monospace fs-6">
+                                <td class="text-nowrap">
+                                    <div class="fw-bold text-dark font-monospace" style="font-size: 0.88rem;">
                                         <i class="bi bi-clock me-1 text-teal" style="color: var(--primary);"></i>
                                         <span dir="ltr">@appt.StartTime - @appt.EndTime</span>
                                     </div>
-                                    <small class="text-muted">جلسة 45 دقيقة</small>
+                                    <small class="text-muted" style="font-size: 0.72rem;">جلسة 45 دقيقة</small>
                                 </td>
                                 <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <a asp-controller="Clients" asp-action="Details" asp-route-id="@appt.ClientId" class="text-decoration-none fw-bold text-dark fs-6" title="فتح الملف الطبي">
+                                    <div class="d-flex align-items-center gap-1 text-nowrap">
+                                        <a asp-controller="Clients" asp-action="Details" asp-route-id="@appt.ClientId" class="text-decoration-none fw-bold text-dark" style="font-size: 0.88rem;" title="فتح الملف الطبي">
                                             @appt.Client?.FullName
                                         </a>
                                         @if (User.IsInRole(ClinicRoles.Admin) || User.IsInRole(ClinicRoles.Receptionist))
                                         {
                                             <button type="button" class="btn btn-link btn-sm p-0 text-muted ms-1" data-bs-toggle="modal" data-bs-target="#editPatientModal-@appt.Id" title="تعديل بيانات المريض">
-                                                <i class="bi bi-pencil-square text-primary" style="font-size: 0.85rem;"></i>
+                                                <i class="bi bi-pencil-square text-primary" style="font-size: 0.8rem;"></i>
                                             </button>
                                         }
                                     </div>
-                                    <div class="small text-muted d-flex align-items-center gap-2 mt-1" dir="ltr" style="text-align: right;">
-                                        <a href="https://wa.me/@(appt.Client?.Phone?.Replace("+", "").Replace(" ", ""))" target="_blank" class="text-decoration-none text-success small" title="محادثة واتساب">
-                                            <i class="bi bi-whatsapp"></i>
-                                        </a>
-                                        <span>@appt.Client?.Phone</span>
+                                    <div class="small text-muted d-flex align-items-center gap-1 mt-0 text-nowrap" dir="ltr" style="font-size: 0.75rem;">
                                         <i class="bi bi-telephone text-muted"></i>
+                                        <span>@appt.Client?.Phone</span>
                                     </div>
                                 </td>
-                                <td>
-                                    <span class="badge rounded-pill d-inline-flex align-items-center gap-1 py-1 px-2" style="background-color: @(appt.Therapist?.ColorTag ?? "#0d9488")15; color: @(appt.Therapist?.ColorTag ?? "#0d9488"); border: 1px solid @(appt.Therapist?.ColorTag ?? "#0d9488")35; font-weight: 600; font-size: 0.82rem;">
-                                        <span class="rounded-circle d-inline-block" style="width: 8px; height: 8px; background-color: @(appt.Therapist?.ColorTag ?? "#0d9488");"></span>
+                                <td class="text-nowrap">
+                                    <span class="badge rounded-pill d-inline-flex align-items-center gap-1 py-1 px-2" style="background-color: @(appt.Therapist?.ColorTag ?? "#0d9488")15; color: @(appt.Therapist?.ColorTag ?? "#0d9488"); border: 1px solid @(appt.Therapist?.ColorTag ?? "#0d9488")35; font-weight: 600; font-size: 0.8rem;" title="@appt.Therapist?.Title (@appt.Therapist?.Specialization)">
+                                        <span class="rounded-circle d-inline-block" style="width: 7px; height: 7px; background-color: @(appt.Therapist?.ColorTag ?? "#0d9488");"></span>
                                         @appt.Therapist?.FullName
                                     </span>
-                                    <div class="small text-muted mt-1" style="font-size: 0.72rem;">@(appt.Therapist?.Title ?? "أخصائي معالج")</div>
                                 </td>
                                 <td>
                                     @if (appt.TreatmentPlan != null)
                                     {
-                                        <a asp-controller="TreatmentPlan" asp-action="Details" asp-route-id="@appt.TreatmentPlanId" class="small text-decoration-none text-dark fw-bold">
+                                        <a asp-controller="TreatmentPlan" asp-action="Details" asp-route-id="@appt.TreatmentPlanId" class="small text-decoration-none text-dark fw-bold d-block text-truncate" style="max-width: 155px; font-size: 0.82rem;" title="@appt.TreatmentPlan.Title">
                                             @appt.TreatmentPlan.Title
                                         </a>
-                                        <div class="small text-muted">الجلسة #@appt.SessionNumber من أصل @appt.TreatmentPlan.TotalSessions</div>
+                                        <div class="small text-muted" style="font-size: 0.72rem;">جلسة @appt.SessionNumber من @appt.TreatmentPlan.TotalSessions</div>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle">استشارة وتقييم أولي</span>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.72rem;">استشارة وتقييم</span>
                                     }
                                 </td>
                                 <td>
-                                    @if (appt.Status == "Confirmed")
+                                    <div>
+                                        @if (appt.Status == "Confirmed")
+                                        {
+                                            <span class="badge-status badge-status-confirmed" style="font-size: 0.74rem; padding: 0.22rem 0.55rem;">حاضر بالعيادة</span>
+                                        }
+                                        else if (appt.Status == "Scheduled")
+                                        {
+                                            <span class="badge-status badge-status-scheduled" style="font-size: 0.74rem; padding: 0.22rem 0.55rem;">مجدول</span>
+                                        }
+                                        else if (appt.Status == "Completed")
+                                        {
+                                            <span class="badge-status badge-status-completed" style="font-size: 0.74rem; padding: 0.22rem 0.55rem;">مكتمل وموثق</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-status badge-status-cancelled" style="font-size: 0.74rem; padding: 0.22rem 0.55rem;">@appt.Status</span>
+                                        }
+                                    </div>
+                                    @if (appt.Status == "Completed" && appt.PainLevelAfter.HasValue)
                                     {
-                                        <span class="badge-status badge-status-confirmed">حاضر بالعيادة</span>
-                                    }
-                                    else if (appt.Status == "Scheduled")
-                                    {
-                                        <span class="badge-status badge-status-scheduled">مجدول</span>
-                                    }
-                                    else if (appt.Status == "Completed")
-                                    {
-                                        <span class="badge-status badge-status-completed">مكتمل وموثق</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge-status badge-status-cancelled">@appt.Status</span>
-                                    }
-                                </td>
-                                <td class="small" style="max-width: 260px;">
-                                    @if (appt.PainLevelAfter.HasValue)
-                                    {
-                                        <div class="fw-bold text-teal mb-1" style="color: var(--primary);">
+                                        <div class="small fw-bold mt-1 text-nowrap" style="font-size: 0.72rem; color: var(--primary);">
                                             <i class="bi bi-heart-pulse me-1"></i> ألم بعد الجلسة: @appt.PainLevelAfter/10
                                         </div>
                                     }
-                                    <span class="text-muted d-block text-truncate" title="@appt.SessionNotes">
-                                        @(appt.SessionNotes ?? "لا توجد ملاحظات مسجلة بعد.")
-                                    </span>
-                                    @if (!string.IsNullOrEmpty(appt.CompletedByDoctorName))
+                                    @if (!string.IsNullOrEmpty(appt.SessionNotes))
                                     {
-                                        <small class="text-muted d-block" style="font-size: 0.72rem;">
-                                            <i class="bi bi-pen me-1"></i> د. @appt.CompletedByDoctorName
-                                        </small>
-                                    }
-                                    @if (!string.IsNullOrEmpty(appt.PatientSignature))
-                                    {
-                                        <small class="text-success d-block fw-semibold mt-1" style="font-size: 0.72rem;">
-                                            <i class="bi bi-pen-fill me-1"></i> توقيع المريض: موثق إلكترونياً
+                                        <small class="text-muted d-block text-truncate mt-1" style="max-width: 135px; font-size: 0.7rem;" title="@appt.SessionNotes">
+                                            <i class="bi bi-chat-left-text me-1"></i> @appt.SessionNotes
                                         </small>
                                     }
                                 </td>
-                                <td class="text-start" style="white-space: nowrap;">
+                                <td class="text-start text-nowrap" style="width: 1%;">
                                     <div class="row-actions-group justify-content-end">
                                         <!-- 1. Doctor / Clinical Action -->
                                         @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
@@ -234,13 +220,6 @@
                                                         <span>وصل</span>
                                                     </button>
                                                 </form>
-                                            }
-                                            else if (appt.Status == "Confirmed")
-                                            {
-                                                <span class="row-action-btn row-action-arrived-badge" title="المريض حاضر بالعيادة">
-                                                    <i class="bi bi-check-circle-fill"></i>
-                                                    <span>حاضر</span>
-                                                </span>
                                             }
 
                                             <!-- 3. WhatsApp Action (Direct Icon Button) -->
