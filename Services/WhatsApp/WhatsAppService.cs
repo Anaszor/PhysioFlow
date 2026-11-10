@@ -164,17 +164,92 @@ namespace PhysioClinic.Services.WhatsApp
 
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions/{_settings.SessionId}");
-                if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+                HttpResponseMessage? response = null;
+                if (!string.IsNullOrWhiteSpace(_settings.SessionId) && _settings.SessionId.Length == 36)
                 {
-                    request.Headers.Add("x-api-key", _settings.ApiKey);
+                    var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions/{_settings.SessionId}");
+                    if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+                    {
+                        request.Headers.Add("x-api-key", _settings.ApiKey);
+                    }
+                    response = await _httpClient.SendAsync(request);
                 }
 
-                var response = await _httpClient.SendAsync(request);
-                result.IsServerReachable = true;
-
-                if (response.IsSuccessStatusCode)
+                if (response == null || !response.IsSuccessStatusCode)
                 {
+                    // Fall back to auto-discovering sessions on Gateway
+                    var listRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions");
+                    if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+                    {
+                        listRequest.Headers.Add("x-api-key", _settings.ApiKey);
+                    }
+                    var listResponse = await _httpClient.SendAsync(listRequest);
+                    result.IsServerReachable = listResponse.IsSuccessStatusCode;
+
+                    if (listResponse.IsSuccessStatusCode)
+                    {
+                        var listContent = await listResponse.Content.ReadAsStringAsync();
+                        var sessions = JsonSerializer.Deserialize<List<GatewaySessionResponseDto>>(listContent, _jsonOptions);
+                        var active = sessions?.FirstOrDefault(s => s.Status == "ready" || s.Status == "qr_ready") ?? sessions?.FirstOrDefault();
+
+                        if (active != null && !string.IsNullOrEmpty(active.Id))
+                        {
+                            _settings.InstanceId = active.Id;
+                            result.Status = active.Status ?? "unknown";
+                            result.Phone = active.Phone;
+                            result.PushName = active.PushName;
+                            result.EngineLoaded = active.EngineLoaded;
+                            result.ErrorMessage = active.LastError;
+
+                            if (result.Status == "created" || result.Status == "stopped")
+                            {
+                                await StartSessionAsync();
+                                result.Status = "qr_ready";
+                            }
+                            return result;
+                        }
+                        else
+                        {
+                            // Auto-create session
+                            var createReq = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/sessions")
+                            {
+                                Content = new StringContent(JsonSerializer.Serialize(new { name = "clinic" }), Encoding.UTF8, "application/json")
+                            };
+                            if (!string.IsNullOrWhiteSpace(_settings.ApiKey)) createReq.Headers.Add("x-api-key", _settings.ApiKey);
+                            var createResp = await _httpClient.SendAsync(createReq);
+                            if (createResp.IsSuccessStatusCode)
+                            {
+                                var createContent = await createResp.Content.ReadAsStringAsync();
+                                var newSess = JsonSerializer.Deserialize<GatewaySessionResponseDto>(createContent, _jsonOptions);
+                                if (newSess != null && !string.IsNullOrEmpty(newSess.Id))
+                                {
+                                    _settings.InstanceId = newSess.Id;
+                                    await StartSessionAsync();
+                                    result.Status = "qr_ready";
+                                    return result;
+                                }
+                            }
+                            result.Status = "not_found";
+                            result.ErrorMessage = "لا توجد جلسات مسجلة في البوابة.";
+                            return result;
+                        }
+                    }
+                    else if (listResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        result.Status = "error";
+                        result.ErrorMessage = "مفتاح API غير صالح للاتصال ببوابة الواتساب (401 Unauthorized).";
+                        return result;
+                    }
+                    else
+                    {
+                        result.Status = "error";
+                        result.ErrorMessage = $"Gateway responded with status code: {listResponse.StatusCode}";
+                        return result;
+                    }
+                }
+                else
+                {
+                    result.IsServerReachable = true;
                     var content = await response.Content.ReadAsStringAsync();
                     var session = JsonSerializer.Deserialize<GatewaySessionResponseDto>(content, _jsonOptions);
                     if (session != null)
@@ -185,16 +260,7 @@ namespace PhysioClinic.Services.WhatsApp
                         result.EngineLoaded = session.EngineLoaded;
                         result.ErrorMessage = session.LastError;
                     }
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    result.Status = "not_found";
-                    result.ErrorMessage = "الجلسة غير مسجلة في البوابة.";
-                }
-                else
-                {
-                    result.Status = "error";
-                    result.ErrorMessage = $"Gateway responded with status code: {response.StatusCode}";
+                    return result;
                 }
             }
             catch (Exception ex)
@@ -220,7 +286,29 @@ namespace PhysioClinic.Services.WhatsApp
             try
             {
                 var baseUrl = string.IsNullOrWhiteSpace(_settings.ApiUrl) ? "http://localhost:2785" : _settings.ApiUrl.TrimEnd('/');
-                var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/sessions/{_settings.SessionId}/start");
+                var sessionId = _settings.SessionId;
+                if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length != 36)
+                {
+                    var listRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions");
+                    if (!string.IsNullOrWhiteSpace(_settings.ApiKey)) listRequest.Headers.Add("x-api-key", _settings.ApiKey);
+                    var listResp = await _httpClient.SendAsync(listRequest);
+                    if (listResp.IsSuccessStatusCode)
+                    {
+                        var listContent = await listResp.Content.ReadAsStringAsync();
+                        var sessions = JsonSerializer.Deserialize<List<GatewaySessionResponseDto>>(listContent, _jsonOptions);
+                        var active = sessions?.FirstOrDefault();
+                        if (active != null && !string.IsNullOrEmpty(active.Id))
+                        {
+                            sessionId = active.Id;
+                            _settings.InstanceId = active.Id;
+                        }
+                    }
+                }
+
+                var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/sessions/{sessionId}/start")
+                {
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                };
                 if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
                 {
                     request.Headers.Add("x-api-key", _settings.ApiKey);
@@ -346,18 +434,40 @@ namespace PhysioClinic.Services.WhatsApp
                 else
                 {
                     var baseUrl = string.IsNullOrWhiteSpace(_settings.ApiUrl) ? "http://localhost:2785" : _settings.ApiUrl.TrimEnd('/');
-                    var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions/{_settings.SessionId}/qr");
-                    if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+                    var sessionId = _settings.SessionId;
+                    if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length != 36)
                     {
-                        request.Headers.Add("x-api-key", _settings.ApiKey);
+                        var listRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions");
+                        if (!string.IsNullOrWhiteSpace(_settings.ApiKey)) listRequest.Headers.Add("x-api-key", _settings.ApiKey);
+                        var listResp = await _httpClient.SendAsync(listRequest);
+                        if (listResp.IsSuccessStatusCode)
+                        {
+                            var listContent = await listResp.Content.ReadAsStringAsync();
+                            var sessions = JsonSerializer.Deserialize<List<GatewaySessionResponseDto>>(listContent, _jsonOptions);
+                            var active = sessions?.FirstOrDefault(s => s.Status == "qr_ready" || s.Status == "ready") ?? sessions?.FirstOrDefault();
+                            if (active != null && !string.IsNullOrEmpty(active.Id))
+                            {
+                                sessionId = active.Id;
+                                _settings.InstanceId = active.Id;
+                            }
+                        }
                     }
 
-                    var response = await _httpClient.SendAsync(request);
-                    if (response.IsSuccessStatusCode)
+                    if (!string.IsNullOrWhiteSpace(sessionId))
                     {
-                        var content = await response.Content.ReadAsStringAsync();
-                        var dto = JsonSerializer.Deserialize<GatewayQrResponseDto>(content, _jsonOptions);
-                        return dto?.QrCode;
+                        var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/sessions/{sessionId}/qr");
+                        if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+                        {
+                            request.Headers.Add("x-api-key", _settings.ApiKey);
+                        }
+
+                        var response = await _httpClient.SendAsync(request);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var content = await response.Content.ReadAsStringAsync();
+                            var dto = JsonSerializer.Deserialize<GatewayQrResponseDto>(content, _jsonOptions);
+                            return dto?.QrCode;
+                        }
                     }
                     return null;
                 }

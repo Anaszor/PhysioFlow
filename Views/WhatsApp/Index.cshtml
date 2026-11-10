@@ -163,19 +163,33 @@
 
     <!-- Right Column: QR Scan & Test Message -->
     <div class="col-lg-6">
-        @if (!string.IsNullOrEmpty(qrCode))
+        @if (!status.IsReady)
         {
             <!-- QR Code Card -->
-            <div class="card-modern p-4 mb-4 text-center">
-                <h5 class="fw-bold mb-2 text-dark">
-                    <i class="bi bi-qr-code-scan text-success me-1"></i> امسح رمز الاستجابة السريعة (QR Code)
-                </h5>
-                <p class="text-muted small mb-3">افتح واتساب في هاتفك > الأجهزة المرتبطة > ربط جهاز > وجّه الكاميرا نحو الرمز التالي:</p>
-
-                <div class="d-flex justify-content-center my-3" id="qrContainer">
-                    <img src="@qrCode" alt="WhatsApp QR Code" class="img-fluid rounded-3 shadow border bg-white p-3" style="max-width: 240px;" id="qrImage" />
+            <div class="card-modern p-4 mb-4 text-center border-2 border-primary-subtle" id="qrCardSection">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-qr-code-scan text-success me-1"></i> امسح رمز الاستجابة السريعة (QR Code)
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="forceRefreshQr()" id="btnRefreshQr">
+                        <i class="bi bi-arrow-clockwise me-1"></i> تحديث الرمز
+                    </button>
                 </div>
-                <small class="text-muted d-block">يتم تحديث الرمز تلقائياً حتى يكتمل الربط.</small>
+                <p class="text-muted small mb-2">افتح واتساب في هاتفك ⬅️ <strong>الأجهزة المرتبطة</strong> ⬅️ <strong>ربط جهاز</strong> ⬅️ وجّه الكاميرا نحو الرمز التالي:</p>
+
+                <div class="d-flex flex-column align-items-center justify-content-center my-3" id="qrContainer" style="min-height: 250px;">
+                    <img src="@(string.IsNullOrEmpty(qrCode) ? "" : qrCode)" alt="WhatsApp QR Code" class="img-fluid rounded-3 shadow border bg-white p-3" style="max-width: 250px; display: @(string.IsNullOrEmpty(qrCode) ? "none" : "block");" id="qrImage" />
+                    
+                    <div id="qrLoadingSpinner" class="text-center py-4" style="display: @(string.IsNullOrEmpty(qrCode) ? "block" : "none");">
+                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                        <div class="text-muted small fw-semibold">جاري جلب رمز الاستجابة السريعة المباشر من السيرفر السحابي...</div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-center gap-2 text-muted small">
+                    <span class="spinner-grow spinner-grow-sm text-success" role="status"></span>
+                    <span>يتجدد الرمز تلقائياً وبشكل حي حتى يكتمل الربط.</span>
+                </div>
             </div>
         }
 
@@ -246,20 +260,44 @@
 
 @section Scripts {
     <script>
-        // Auto-refresh status if QR code is waiting
-        @if (status.Status == "qr_ready")
+        function updateQrAndStatus() {
+            fetch('/WhatsApp/LiveStatus')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.isReady) {
+                        window.location.reload();
+                    } else {
+                        const img = document.getElementById('qrImage');
+                        const spinner = document.getElementById('qrLoadingSpinner');
+                        if (data.qrCode && img) {
+                            img.src = data.qrCode;
+                            img.style.display = 'block';
+                            if (spinner) spinner.style.display = 'none';
+                        }
+                        const badge = document.getElementById('badgeSessionStatus');
+                        if (badge && data.status) {
+                            if (data.status === 'qr_ready') {
+                                badge.className = 'badge bg-warning text-dark px-2 py-1';
+                                badge.innerText = 'بانتظار مسح رمز QR 🟡';
+                            }
+                        }
+                    }
+                })
+                .catch(err => console.log('Polling status...', err));
+        }
+
+        function forceRefreshQr() {
+            const btn = document.getElementById('btnRefreshQr');
+            if (btn) btn.disabled = true;
+            updateQrAndStatus();
+            setTimeout(() => { if (btn) btn.disabled = false; }, 2000);
+        }
+
+        @if (!status.IsReady)
         {
             <text>
-            setInterval(function() {
-                fetch('/WhatsApp/LiveStatus')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.isReady) {
-                            window.location.reload();
-                        }
-                    })
-                    .catch(err => console.log('Polling status...', err));
-            }, 5000);
+            setInterval(updateQrAndStatus, 3000);
+            updateQrAndStatus();
             </text>
         }
     </script>
