@@ -1,12 +1,12 @@
 @model PhysioClinic.Models.ViewModels.BookingViewModel
 @{
-    ViewData["Title"] = "حجز وإدارة الفترات الزمنية (Timeslots)";
+    ViewData["Title"] = "حجز موعد واختيار الفترة الزمنية";
 }
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div>
         <h3 class="fw-bold mb-1 text-dark">حجز جلسة واختيار الفترة الزمنية (Timeslots) 📅</h3>
-        <p class="text-muted mb-0">نظام ذكي وسهل لحجز فترات الجلسات مع منع التضارب وتحديث التوفر بشكل مباشر ولحظي.</p>
+        <p class="text-muted mb-0">تحديد المعالج والتاريخ واختيار الفترة الزمنية المتاحة دون أي تضارب بالمواعيد.</p>
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Index" class="btn btn-modern btn-modern-outline">
@@ -20,7 +20,7 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
 
     <input type="hidden" asp-for="SelectedTime" id="selectedTimeInput" />
-    <input type="hidden" asp-for="DurationMinutes" id="durationMinutesInput" value="@Model.DurationMinutes" />
+    <input type="hidden" asp-for="DurationMinutes" id="durationMinutesInput" value="45" />
 
     <div class="row g-4">
         <!-- Main Configuration Column -->
@@ -43,8 +43,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label-modern fw-bold">المريض المستفيد <span class="text-danger">*</span></label>
-                            <input type="text" id="clientSearchInput" class="form-control form-control-sm mb-2" placeholder="🔍 فلترة سريعة بالاسم أو رقم الهاتف..." oninput="filterClientOptions(this.value)" autocomplete="off" />
-                            <select asp-for="ClientId" id="clientSelect" class="form-select form-select-modern" onchange="updateSummary()" size="4" required style="font-size: 0.88rem;">
+                            <select asp-for="ClientId" id="clientSelect" class="form-select form-select-modern" onchange="updateSummary()" required>
                                 <option value="">-- اختر ملف المريض --</option>
                                 @foreach (var c in Model.Clients)
                                 {
@@ -56,7 +55,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label-modern fw-bold">الخطة / البرنامج العلاجي</label>
-                            <select asp-for="TreatmentPlanId" id="planSelect" class="form-select form-select-modern" onchange="updateSummary()" style="height: 48px;">
+                            <select asp-for="TreatmentPlanId" id="planSelect" class="form-select form-select-modern" onchange="updateSummary()">
                                 <option value="">-- جلسة استشارة عامة / تقييم أولي --</option>
                                 @foreach (var tp in Model.ActivePlans)
                                 {
@@ -73,19 +72,19 @@
                 </div>
             </div>
 
-            <!-- 2. Therapist & Date & Duration Selection -->
+            <!-- 2. Therapist & Date Selection -->
             <div class="card-modern mb-4">
                 <div class="card-modern-header">
                     <div class="d-flex align-items-center gap-2">
                         <div class="zone-avatar" style="width: 36px; height: 36px; background-color: #ede9fe; color: #4338ca;">
                             <i class="bi bi-person-badge"></i>
                         </div>
-                        <h6 class="fw-bold mb-0 text-dark">2. الأخصائي المعالج وتاريخ الجلسة والمدة</h6>
+                        <h6 class="fw-bold mb-0 text-dark">2. الأخصائي المعالج وتاريخ الجلسة</h6>
                     </div>
                 </div>
 
                 <div class="card-modern-body">
-                    <div class="row g-3 mb-3">
+                    <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label-modern fw-bold">الأخصائي المشرف <span class="text-danger">*</span></label>
                             <select asp-for="TherapistId" id="therapistSelect" class="form-select form-select-modern" onchange="loadSlotsAjax()">
@@ -112,40 +111,6 @@
                             <span asp-validation-for="SelectedDate" class="text-danger small"></span>
                         </div>
                     </div>
-
-                    <!-- Duration & Mode Selector -->
-                    <div class="p-3 bg-light rounded-3 border">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <div>
-                                <span class="fw-bold text-dark small d-block mb-1">مدة الجلسة الزمنية:</span>
-                                <div class="btn-group btn-group-sm" role="group" id="durationGroup">
-                                    <button type="button" class="btn btn-outline-primary @(Model.DurationMinutes == 30 ? "active" : "")" onclick="setDuration(30)">30 دقيقة</button>
-                                    <button type="button" class="btn btn-outline-primary @(Model.DurationMinutes == 45 ? "active" : "")" onclick="setDuration(45)">45 دقيقة (افتراضي)</button>
-                                    <button type="button" class="btn btn-outline-primary @(Model.DurationMinutes == 60 ? "active" : "")" onclick="setDuration(60)">60 دقيقة</button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <span class="fw-bold text-dark small d-block mb-1">نمط الاختيار:</span>
-                                <div class="form-check form-switch m-0 pt-1">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="customTimeToggle" onchange="toggleCustomTimeMode(this.checked)">
-                                    <label class="form-check-label small fw-semibold text-secondary" for="customTimeToggle">تحديد وقت مخصص يدوياً</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Custom Time Picker Row (Hidden by default) -->
-                        <div id="customTimeRow" class="row g-2 mt-3 pt-3 border-top d-none">
-                            <div class="col-sm-6">
-                                <label class="form-label-modern small fw-bold">وقت البدء المخصص</label>
-                                <input type="time" asp-for="CustomStartTime" id="customStartTimeInput" class="form-control form-control-modern fw-bold" onchange="onCustomTimeChanged()" />
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label-modern small fw-bold">وقت الانتهاء المخصص</label>
-                                <input type="time" asp-for="CustomEndTime" id="customEndTimeInput" class="form-control form-control-modern fw-bold" onchange="onCustomTimeChanged()" />
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -157,7 +122,7 @@
                             <i class="bi bi-clock"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold mb-0 text-dark">3. اختيار الفترة الزمنية المتاحة</h6>
+                            <h6 class="fw-bold mb-0 text-dark">3. اختيار الفترة الزمنية المتاحة (جلسة 45 دقيقة)</h6>
                             <small class="text-muted" id="slotsHeaderSubtitle">الفترات المتاحة خضراء، والمحجوزة رمادية</small>
                         </div>
                     </div>
@@ -279,7 +244,7 @@
                         <span class="text-muted small d-block mb-1">تاريخ وموعد الجلسة:</span>
                         <div class="fw-bold text-dark" id="summaryDate">@Model.SelectedDate.ToString("yyyy-MM-dd")</div>
                         <div class="fw-bold fs-5 mt-1 text-primary" id="summaryTime">-- اختر الفترة الزمنية --</div>
-                        <span class="badge bg-light text-muted border mt-1" id="summaryDurationBadge">جلسة تأهيل @Model.DurationMinutes دقيقة</span>
+                        <span class="badge bg-light text-muted border mt-1" id="summaryDurationBadge">جلسة تأهيل 45 دقيقة</span>
                     </div>
 
                     <div class="mb-4">
@@ -298,9 +263,6 @@
 
 @section Scripts {
     <script>
-        let currentDuration = @Model.DurationMinutes;
-        let isCustomTime = false;
-
         function pickSlot(time, element) {
             document.querySelectorAll('.timeslot-pill').forEach(el => el.classList.remove('selected'));
             if (element) element.classList.add('selected');
@@ -308,16 +270,6 @@
             document.getElementById('selectedTimeInput').value = time;
             document.getElementById('summaryTime').innerText = "الساعة: " + time;
             validateAndEnableSubmit();
-        }
-
-        function setDuration(dur) {
-            currentDuration = dur;
-            document.getElementById('durationMinutesInput').value = dur;
-            document.querySelectorAll('#durationGroup button').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('summaryDurationBadge').innerText = `جلسة تأهيل ${dur} دقيقة`;
-            document.getElementById('slotsHeaderSubtitle').innerText = `مدة الفترة: ${dur} دقيقة. الفترات الخضراء متاحة.`;
-            loadSlotsAjax();
         }
 
         function setQuickDate(daysOffset) {
@@ -329,54 +281,6 @@
             const str = `${yyyy}-${mm}-${dd}`;
             document.getElementById('dateInput').value = str;
             loadSlotsAjax();
-        }
-
-        function toggleCustomTimeMode(enabled) {
-            isCustomTime = enabled;
-            const customRow = document.getElementById('customTimeRow');
-            const slotsCard = document.getElementById('slotsCardContainer');
-
-            if (enabled) {
-                customRow.classList.remove('d-none');
-                slotsCard.classList.add('opacity-50');
-                slotsCard.style.pointerEvents = 'none';
-                onCustomTimeChanged();
-            } else {
-                customRow.classList.add('d-none');
-                slotsCard.classList.remove('opacity-50');
-                slotsCard.style.pointerEvents = 'auto';
-                document.getElementById('customStartTimeInput').value = '';
-                document.getElementById('customEndTimeInput').value = '';
-                updateSummary();
-            }
-        }
-
-        function onCustomTimeChanged() {
-            const startVal = document.getElementById('customStartTimeInput').value;
-            const endVal = document.getElementById('customEndTimeInput').value;
-
-            if (startVal) {
-                document.getElementById('selectedTimeInput').value = startVal;
-                document.getElementById('summaryTime').innerText = `وقت مخصص: ${startVal}` + (endVal ? ` - ${endVal}` : '');
-                validateAndEnableSubmit();
-            }
-        }
-
-        function filterClientOptions(term) {
-            const termLower = (term || '').toLowerCase().trim();
-            const select = document.getElementById('clientSelect');
-            if (!select) return;
-
-            Array.from(select.options).forEach(opt => {
-                if (!opt.value) return;
-                const name = (opt.dataset.name || opt.text || '').toLowerCase();
-                const phone = (opt.dataset.phone || '').toLowerCase();
-                if (!termLower || name.includes(termLower) || phone.includes(termLower)) {
-                    opt.style.display = '';
-                } else {
-                    opt.style.display = 'none';
-                }
-            });
         }
 
         async function loadSlotsAjax() {
@@ -392,7 +296,7 @@
             if (spinner) spinner.classList.remove('d-none');
 
             try {
-                const response = await fetch(`/Appointments/GetTherapistSlots?therapistId=${therapistId}&date=${date}&duration=${currentDuration}`);
+                const response = await fetch(`/Appointments/GetTherapistSlots?therapistId=${therapistId}&date=${date}&duration=45`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.slots) {

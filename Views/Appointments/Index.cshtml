@@ -4,9 +4,6 @@
     var selectedDate = (DateTime)(ViewBag.SelectedDate ?? DateTime.Today);
     var therapistId = ViewBag.TherapistId as int?;
     var therapists = ViewBag.Therapists as List<PhysioClinic.Models.Therapist> ?? new();
-    var timelineSlots = ViewBag.TimelineSlots as List<PhysioClinic.Models.ViewModels.TimeslotSlot> ?? new();
-    var activeClients = ViewBag.ActiveClients as List<PhysioClinic.Models.Client> ?? new();
-    var activePlans = ViewBag.ActivePlans as List<PhysioClinic.Models.TreatmentPlan> ?? new();
     ViewData["Title"] = "جدول المواعيد والعيادات";
 }
 
@@ -23,16 +20,10 @@
 
     @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
     {
-        <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-modern btn-modern-primary" data-bs-toggle="modal" data-bs-target="#quickBookModal" onclick="prepareQuickBookModal('10:00')">
-                <i class="bi bi-lightning-charge-fill me-1"></i>
-                <span>حجز موعد سريع</span>
-            </button>
-            <a asp-action="Book" class="btn btn-modern btn-modern-outline">
-                <i class="bi bi-calendar-plus-fill me-1"></i>
-                <span class="d-none d-sm-inline">حجز مخصص (Slots)</span>
-            </a>
-        </div>
+        <a asp-action="Book" class="btn btn-modern btn-modern-primary">
+            <i class="bi bi-calendar-plus-fill me-1"></i>
+            <span>حجز موعد جديد</span>
+        </a>
     }
 </div>
 
@@ -80,35 +71,8 @@
     </form>
 </div>
 
-<!-- Receptionist View Switcher (Table View vs Timeslots Timeline) -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-    <ul class="nav nav-pills p-1 bg-white border rounded-pill shadow-sm" id="viewModeTabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active rounded-pill px-3 py-1 fw-semibold" id="tab-list-view" data-bs-toggle="pill" data-bs-target="#view-list" type="button">
-                <i class="bi bi-list-check me-1"></i> جدول المواعيد المحجوزة (@Model.Count())
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link rounded-pill px-3 py-1 fw-semibold" id="tab-timeline-view" data-bs-toggle="pill" data-bs-target="#view-timeline" type="button">
-                <i class="bi bi-grid-3x3-gap-fill me-1"></i> مخطط الفترات لليوم (Timeslots)
-                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1">@timelineSlots.Count(s => s.IsAvailable) فترة متاحة</span>
-            </button>
-        </li>
-    </ul>
-
-    @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
-    {
-        <div class="text-muted small">
-            <i class="bi bi-info-circle me-1 text-teal" style="color: var(--primary);"></i>
-            يمكنك حجز أي فترة متاحة بضغطة واحدة مباشرة من مخطط الفترات.
-        </div>
-    }
-</div>
-
-<div class="tab-content" id="appointmentsViewTabContent">
-    <!-- TAB 1: LIST / TABLE VIEW -->
-    <div class="tab-pane fade show active" id="view-list" role="tabpanel">
-        <div class="card-modern">
+<!-- Appointments Table Card -->
+<div class="card-modern">
     <div class="p-0">
         @if (!Model.Any())
         {
@@ -138,7 +102,7 @@
                             <th>البرنامج العلاجي</th>
                             <th>الحالة</th>
                             <th>التقرير والملاحظات</th>
-                            <th class="text-start">الإجراءات</th>
+                            <th class="text-start" style="min-width: 250px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -233,7 +197,7 @@
                                         </small>
                                     }
                                 </td>
-                                <td class="text-start">
+                                <td class="text-start" style="white-space: nowrap;">
                                     <div class="row-actions-group justify-content-end">
                                         <!-- 1. Doctor / Clinical Action -->
                                         @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
@@ -242,23 +206,22 @@
                                             {
                                                 <button type="button" class="row-action-btn row-action-clinical" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="توثيق الجلسة السريرية">
                                                     <i class="bi bi-file-earmark-medical"></i>
-                                                    <span>توثيق الجلسة</span>
+                                                    <span>توثيق</span>
                                                 </button>
                                             }
                                             else
                                             {
                                                 <button type="button" class="row-action-btn row-action-report" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="عرض تفاصيل الجلسة والتقرير">
                                                     <i class="bi bi-check2-circle"></i>
-                                                    <span>تفاصيل الجلسة</span>
+                                                    <span>تفاصيل</span>
                                                 </button>
-                                                <a asp-action="SessionReport" asp-route-id="@appt.Id" target="_blank" class="row-action-btn row-action-pdf" title="طباعة أو تحميل تقرير الجلسة PDF">
+                                                <a asp-action="SessionReport" asp-route-id="@appt.Id" target="_blank" class="row-action-btn row-action-pdf row-action-icon" title="طباعة أو تحميل تقرير الجلسة PDF">
                                                     <i class="bi bi-file-earmark-pdf"></i>
-                                                    <span>PDF</span>
                                                 </a>
                                             }
                                         }
 
-                                        <!-- 2. Arrival Action (وصل بالعيادة) -->
+                                        <!-- 2. Arrival Action (وصل) -->
                                         @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
                                         {
                                             @if (appt.Status == "Scheduled")
@@ -268,7 +231,7 @@
                                                     <input type="hidden" name="id" value="@appt.Id" />
                                                     <button type="submit" class="row-action-btn row-action-arrival" title="تأكيد وصول المريض بالعيادة">
                                                         <i class="bi bi-person-check-fill"></i>
-                                                        <span>وصل بالعيادة</span>
+                                                        <span>وصل</span>
                                                     </button>
                                                 </form>
                                             }
@@ -276,40 +239,37 @@
                                             {
                                                 <span class="row-action-btn row-action-arrived-badge" title="المريض حاضر بالعيادة">
                                                     <i class="bi bi-check-circle-fill"></i>
-                                                    <span>حاضر بالعيادة</span>
+                                                    <span>حاضر</span>
                                                 </span>
                                             }
 
-                                            <!-- 3. WhatsApp Action (Consistent Style) -->
+                                            <!-- 3. WhatsApp Action (Direct Icon Button) -->
                                             <form asp-action="SendReminder" method="post" class="d-inline m-0" onsubmit="return confirm('هل تريد إرسال رسالة تذكير بالموعد للمريض عبر واتساب؟');">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@appt.Id" />
-                                                <button type="submit" class="row-action-btn row-action-whatsapp" title="إرسال تذكير واتساب للمريض">
+                                                <button type="submit" class="row-action-btn row-action-whatsapp row-action-icon" title="إرسال تذكير واتساب للمريض">
                                                     <i class="bi bi-whatsapp"></i>
-                                                    <span>واتساب</span>
                                                 </button>
                                             </form>
 
-                                            <!-- 4. Edit Appointment Button (Direct, No Dropdown) -->
-                                            <button type="button" class="row-action-btn row-action-edit" data-bs-toggle="modal" data-bs-target="#editApptModal-@appt.Id" title="تعديل الموعد والأخصائي">
+                                            <!-- 4. Edit Appointment Button (Direct Icon Button) -->
+                                            <button type="button" class="row-action-btn row-action-edit row-action-icon" data-bs-toggle="modal" data-bs-target="#editApptModal-@appt.Id" title="تعديل الموعد والأخصائي">
                                                 <i class="bi bi-pencil-square"></i>
-                                                <span>تعديل</span>
                                             </button>
 
-                                            <!-- 5. Cancel Button (Direct, No Dropdown) -->
+                                            <!-- 5. Cancel Button (Direct Icon Button) -->
                                             @if (appt.Status != "Cancelled")
                                             {
-                                                <button type="button" class="row-action-btn row-action-cancel" onclick="if(confirm('هل أنت متأكد من إلغاء هذا الموعد؟')) document.getElementById('cancelForm-@appt.Id').submit();" title="إلغاء الموعد">
+                                                <button type="button" class="row-action-btn row-action-cancel row-action-icon" onclick="if(confirm('هل أنت متأكد من إلغاء هذا الموعد؟')) document.getElementById('cancelForm-@appt.Id').submit();" title="إلغاء الموعد">
                                                     <i class="bi bi-x-circle"></i>
-                                                    <span>إلغاء</span>
                                                 </button>
                                             }
                                         }
 
-                                        <!-- 6. Delete Button (Admin Only, Direct) -->
+                                        <!-- 6. Delete Button (Admin Only, Direct Icon Button) -->
                                         @if (User.IsInRole(ClinicRoles.Admin))
                                         {
-                                            <button type="button" class="row-action-btn row-action-delete" onclick="if(confirm('تحذير: هل أنت متأكد من حذف هذا الموعد نهائياً من قاعدة البيانات؟')) document.getElementById('deleteForm-@appt.Id').submit();" title="حذف الموعد نهائياً">
+                                            <button type="button" class="row-action-btn row-action-delete row-action-icon" onclick="if(confirm('تحذير: هل أنت متأكد من حذف هذا الموعد نهائياً من قاعدة البيانات؟')) document.getElementById('deleteForm-@appt.Id').submit();" title="حذف الموعد نهائياً">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         }
@@ -587,460 +547,6 @@
         }
     </div>
 </div>
-</div>
-<!-- END TAB 1 -->
-
-<!-- TAB 2: TIMESLOTS TIMELINE & MATRIX VIEW -->
-<div class="tab-pane fade" id="view-timeline" role="tabpanel">
-    <div class="card-modern p-4 mb-4">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
-            <div>
-                <h5 class="fw-bold mb-1 text-dark">
-                    <i class="bi bi-clock-history text-teal me-2" style="color: var(--primary);"></i>
-                    مخطط الفترات الزمنية لليوم (@selectedDate.ToString("dd MMMM yyyy"))
-                </h5>
-                <p class="text-muted small mb-0">عرض شامل لجميع فترات الجلسات (المحجوزة والمتاحة)، مع إمكانية التسكين السريع بضغطة واحدة.</p>
-            </div>
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-flex align-items-center gap-2 small">
-                    <span class="d-inline-block rounded-circle" style="width: 12px; height: 12px; background-color: #10b981;"></span>
-                    <span>متاح (@timelineSlots.Count(s => s.IsAvailable))</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 small">
-                    <span class="d-inline-block rounded-circle" style="width: 12px; height: 12px; background-color: #0284c7;"></span>
-                    <span>محجوز (@timelineSlots.Count(s => !s.IsAvailable))</span>
-                </div>
-            </div>
-        </div>
-
-        @if (!timelineSlots.Any())
-        {
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-calendar-x fs-1 text-secondary mb-2 d-block"></i>
-                لا توجد فترات مولدة لهذا اليوم.
-            </div>
-        }
-        else
-        {
-            <!-- Group 1: Morning -->
-            <div class="mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <span class="badge bg-warning-subtle text-warning border px-2 py-1"><i class="bi bi-sunrise-fill"></i></span>
-                    <h6 class="fw-bold mb-0 text-dark">الفترة الصباحية (09:00 - 12:00)</h6>
-                </div>
-                <div class="row g-3">
-                    @foreach (var slot in timelineSlots.Where(s => s.Period == "صباحي"))
-                    {
-                        <div class="col-md-6 col-lg-4 col-xl-3">
-                            @if (slot.IsAvailable)
-                            {
-                                <div class="card h-100 border border-success-subtle p-3 rounded-4 shadow-sm bg-white position-relative" style="border-style: dashed !important; border-width: 2px !important;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-check-circle-fill me-1"></i> متاح للحجز
-                                        </span>
-                                        <span class="fw-bold text-dark fs-6">
-                                            <i class="bi bi-clock me-1 text-teal" style="color: var(--primary);"></i> @slot.DisplayTime
-                                        </span>
-                                    </div>
-                                    <div class="text-muted small mb-3">
-                                        جلسة علاج وتأهيل (45 دقيقة)
-                                    </div>
-                                    @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-success w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-1 mt-auto" onclick="prepareQuickBookModal('@slot.Time', '@slot.EndTime')" data-bs-toggle="modal" data-bs-target="#quickBookModal">
-                                            <i class="bi bi-plus-circle"></i>
-                                            <span>حجز هذه الفترة (@slot.Time)</span>
-                                        </button>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="card h-100 border shadow-sm p-3 rounded-4 bg-white position-relative" style="border-right: 4px solid var(--primary) !important;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        @if (slot.Status == "Confirmed")
-                                        {
-                                            <span class="badge bg-success text-white px-2 py-1 rounded-pill">
-                                                <i class="bi bi-person-check-fill me-1"></i> حاضر بالعيادة
-                                            </span>
-                                        }
-                                        else if (slot.Status == "Completed")
-                                        {
-                                            <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">
-                                                <i class="bi bi-check2-all me-1"></i> مكتمل
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill">
-                                                <i class="bi bi-calendar2-check me-1"></i> مجدول
-                                            </span>
-                                        }
-                                        <span class="fw-bold text-dark fs-6">
-                                            <i class="bi bi-clock me-1 text-primary"></i> @slot.DisplayTime
-                                        </span>
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <div class="zone-avatar" style="width: 34px; height: 34px; background: #e0f2fe; color: #0284c7; border-radius: 8px;">
-                                            <i class="bi bi-person-fill"></i>
-                                        </div>
-                                        <div class="overflow-hidden">
-                                            <div class="fw-bold text-dark text-truncate small">@slot.BookedByClientName</div>
-                                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">@slot.TherapistName</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="small text-muted mb-2 d-block text-truncate" style="font-size: 0.75rem;">
-                                        <i class="bi bi-clipboard2-pulse me-1"></i> @slot.SessionType
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-1 justify-content-end pt-2 border-top mt-auto">
-                                        @if (slot.Status == "Scheduled" && (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin)))
-                                        {
-                                            <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@slot.AppointmentId" />
-                                                <button type="submit" class="row-action-btn row-action-arrival" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="تأكيد وصول المريض">
-                                                    <i class="bi bi-person-check-fill"></i>
-                                                    <span>وصل</span>
-                                                </button>
-                                            </form>
-                                        }
-                                        @if (!string.IsNullOrEmpty(slot.ClientPhone))
-                                        {
-                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="row-action-btn row-action-whatsapp" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="واتساب المريض">
-                                                <i class="bi bi-whatsapp"></i>
-                                                <span>واتساب</span>
-                                            </a>
-                                        }
-                                        @if (slot.AppointmentId.HasValue)
-                                        {
-                                            <button type="button" class="row-action-btn row-action-edit" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
-                                                <i class="bi bi-pencil-square"></i>
-                                                <span>تعديل</span>
-                                            </button>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Group 2: Afternoon -->
-            <div class="mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <span class="badge bg-primary-subtle text-primary border px-2 py-1"><i class="bi bi-sun-fill"></i></span>
-                    <h6 class="fw-bold mb-0 text-dark">فترة الظهيرة والعصر (13:00 - 16:00)</h6>
-                </div>
-                <div class="row g-3">
-                    @foreach (var slot in timelineSlots.Where(s => s.Period == "ظهراً" || s.Period == "عصراً"))
-                    {
-                        <div class="col-md-6 col-lg-4 col-xl-3">
-                            @if (slot.IsAvailable)
-                            {
-                                <div class="card h-100 border border-success-subtle p-3 rounded-4 shadow-sm bg-white position-relative" style="border-style: dashed !important; border-width: 2px !important;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-check-circle-fill me-1"></i> متاح للحجز
-                                        </span>
-                                        <span class="fw-bold text-dark fs-6">
-                                            <i class="bi bi-clock me-1 text-teal" style="color: var(--primary);"></i> @slot.DisplayTime
-                                        </span>
-                                    </div>
-                                    <div class="text-muted small mb-3">
-                                        جلسة علاج وتأهيل (45 دقيقة)
-                                    </div>
-                                    @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-success w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-1 mt-auto" onclick="prepareQuickBookModal('@slot.Time', '@slot.EndTime')" data-bs-toggle="modal" data-bs-target="#quickBookModal">
-                                            <i class="bi bi-plus-circle"></i>
-                                            <span>حجز هذه الفترة (@slot.Time)</span>
-                                        </button>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="card h-100 border shadow-sm p-3 rounded-4 bg-white position-relative" style="border-right: 4px solid var(--primary) !important;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        @if (slot.Status == "Confirmed")
-                                        {
-                                            <span class="badge bg-success text-white px-2 py-1 rounded-pill">
-                                                <i class="bi bi-person-check-fill me-1"></i> حاضر بالعيادة
-                                            </span>
-                                        }
-                                        else if (slot.Status == "Completed")
-                                        {
-                                            <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">
-                                                <i class="bi bi-check2-all me-1"></i> مكتمل
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill">
-                                                <i class="bi bi-calendar2-check me-1"></i> مجدول
-                                            </span>
-                                        }
-                                        <span class="fw-bold text-dark fs-6">
-                                            <i class="bi bi-clock me-1 text-primary"></i> @slot.DisplayTime
-                                        </span>
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <div class="zone-avatar" style="width: 34px; height: 34px; background: #e0f2fe; color: #0284c7; border-radius: 8px;">
-                                            <i class="bi bi-person-fill"></i>
-                                        </div>
-                                        <div class="overflow-hidden">
-                                            <div class="fw-bold text-dark text-truncate small">@slot.BookedByClientName</div>
-                                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">@slot.TherapistName</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="small text-muted mb-2 d-block text-truncate" style="font-size: 0.75rem;">
-                                        <i class="bi bi-clipboard2-pulse me-1"></i> @slot.SessionType
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-1 justify-content-end pt-2 border-top mt-auto">
-                                        @if (slot.Status == "Scheduled" && (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin)))
-                                        {
-                                            <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@slot.AppointmentId" />
-                                                <button type="submit" class="row-action-btn row-action-arrival" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="تأكيد وصول المريض">
-                                                    <i class="bi bi-person-check-fill"></i>
-                                                    <span>وصل</span>
-                                                </button>
-                                            </form>
-                                        }
-                                        @if (!string.IsNullOrEmpty(slot.ClientPhone))
-                                        {
-                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="row-action-btn row-action-whatsapp" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="واتساب المريض">
-                                                <i class="bi bi-whatsapp"></i>
-                                                <span>واتساب</span>
-                                            </a>
-                                        }
-                                        @if (slot.AppointmentId.HasValue)
-                                        {
-                                            <button type="button" class="row-action-btn row-action-edit" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
-                                                <i class="bi bi-pencil-square"></i>
-                                                <span>تعديل</span>
-                                            </button>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Group 3: Evening -->
-            <div>
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <span class="badge bg-indigo-subtle text-indigo border px-2 py-1" style="background-color: #ede9fe; color: #4338ca;"><i class="bi bi-moon-stars-fill"></i></span>
-                    <h6 class="fw-bold mb-0 text-dark">الفترة المسائية (16:30 - 20:00)</h6>
-                </div>
-                <div class="row g-3">
-                    @foreach (var slot in timelineSlots.Where(s => s.Period == "مسائي"))
-                    {
-                        <div class="col-md-6 col-lg-4 col-xl-3">
-                            @if (slot.IsAvailable)
-                            {
-                                <div class="card h-100 border border-success-subtle p-3 rounded-4 shadow-sm bg-white position-relative" style="border-style: dashed !important; border-width: 2px !important;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-check-circle-fill me-1"></i> متاح للحجز
-                                        </span>
-                                        <span class="fw-bold text-dark fs-6">
-                                            <i class="bi bi-clock me-1 text-teal" style="color: var(--primary);"></i> @slot.DisplayTime
-                                        </span>
-                                    </div>
-                                    <div class="text-muted small mb-3">
-                                        جلسة علاج وتأهيل (45 دقيقة)
-                                    </div>
-                                    @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-success w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-1 mt-auto" onclick="prepareQuickBookModal('@slot.Time', '@slot.EndTime')" data-bs-toggle="modal" data-bs-target="#quickBookModal">
-                                            <i class="bi bi-plus-circle"></i>
-                                            <span>حجز هذه الفترة (@slot.Time)</span>
-                                        </button>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="card h-100 border shadow-sm p-3 rounded-4 bg-white position-relative" style="border-right: 4px solid var(--primary) !important;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        @if (slot.Status == "Confirmed")
-                                        {
-                                            <span class="badge bg-success text-white px-2 py-1 rounded-pill">
-                                                <i class="bi bi-person-check-fill me-1"></i> حاضر بالعيادة
-                                            </span>
-                                        }
-                                        else if (slot.Status == "Completed")
-                                        {
-                                            <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">
-                                                <i class="bi bi-check2-all me-1"></i> مكتمل
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill">
-                                                <i class="bi bi-calendar2-check me-1"></i> مجدول
-                                            </span>
-                                        }
-                                        <span class="fw-bold text-dark fs-6">
-                                            <i class="bi bi-clock me-1 text-primary"></i> @slot.DisplayTime
-                                        </span>
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <div class="zone-avatar" style="width: 34px; height: 34px; background: #e0f2fe; color: #0284c7; border-radius: 8px;">
-                                            <i class="bi bi-person-fill"></i>
-                                        </div>
-                                        <div class="overflow-hidden">
-                                            <div class="fw-bold text-dark text-truncate small">@slot.BookedByClientName</div>
-                                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">@slot.TherapistName</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="small text-muted mb-2 d-block text-truncate" style="font-size: 0.75rem;">
-                                        <i class="bi bi-clipboard2-pulse me-1"></i> @slot.SessionType
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-1 justify-content-end pt-2 border-top mt-auto">
-                                        @if (slot.Status == "Scheduled" && (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin)))
-                                        {
-                                            <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@slot.AppointmentId" />
-                                                <button type="submit" class="row-action-btn row-action-arrival" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="تأكيد وصول المريض">
-                                                    <i class="bi bi-person-check-fill"></i>
-                                                    <span>وصل</span>
-                                                </button>
-                                            </form>
-                                        }
-                                        @if (!string.IsNullOrEmpty(slot.ClientPhone))
-                                        {
-                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="row-action-btn row-action-whatsapp" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="واتساب المريض">
-                                                <i class="bi bi-whatsapp"></i>
-                                                <span>واتساب</span>
-                                            </a>
-                                        }
-                                        @if (slot.AppointmentId.HasValue)
-                                        {
-                                            <button type="button" class="row-action-btn row-action-edit" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
-                                                <i class="bi bi-pencil-square"></i>
-                                                <span>تعديل</span>
-                                            </button>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-    </div>
-</div>
-<!-- END TAB 2 -->
-</div>
-
-<!-- RECEPTIONIST & ADMIN: Quick Book Modal from Timeline Slots -->
-<div class="modal fade" id="quickBookModal" tabindex="-1" aria-labelledby="quickBookModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; overflow: hidden;">
-            <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);">
-                <div class="d-flex align-items-center gap-2 text-white">
-                    <div class="zone-avatar" style="width: 36px; height: 36px; background: rgba(255,255,255,0.2); color: #fff; border-radius: 10px;">
-                        <i class="bi bi-lightning-charge-fill fs-6"></i>
-                    </div>
-                    <div>
-                        <h6 class="modal-title fw-bold text-white mb-0" id="quickBookModalLabel">حجز موعد سريع للفترة الزمنية</h6>
-                        <small class="text-white-50">تسكين مريض مباشرة في الفترة المحددة</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-            </div>
-            <form asp-action="QuickBook" asp-controller="Appointments" method="post">
-                @Html.AntiForgeryToken()
-                <div class="modal-body p-4">
-                    <!-- Client Selector with Instant Live Search -->
-                    <div class="mb-3">
-                        <label class="form-label-modern fw-bold mb-1">المريض المستفيد <span class="text-danger">*</span></label>
-                        <input type="text" id="qbClientSearch" class="form-control form-control-sm mb-2" placeholder="🔍 اكتب اسم أو جوال المريض للفلترة السريعة..." oninput="filterQbClients(this.value)" autocomplete="off" />
-                        <select name="clientId" id="qbClientSelect" class="form-select form-control-modern" size="4" required style="font-size: 0.88rem;">
-                            @foreach (var c in activeClients)
-                            {
-                                <option value="@c.Id" data-name="@c.FullName" data-phone="@c.Phone">@c.FullName (@c.Phone)</option>
-                            }
-                        </select>
-                        <small class="text-muted">اضغط على اسم المريض من القائمة أعلاه لتحديده.</small>
-                    </div>
-
-                    <!-- Therapist Selector -->
-                    <div class="mb-3">
-                        <label class="form-label-modern fw-bold mb-1">الأخصائي المشرف <span class="text-danger">*</span></label>
-                        <select name="therapistId" id="qbTherapistSelect" class="form-select form-control-modern" required>
-                            @foreach (var th in therapists)
-                            {
-                                <!option value="@th.Id" @(th.Id == (therapistId ?? therapists.FirstOrDefault()?.Id) ? "selected" : "")>
-                                    @th.Title @th.FullName (@th.Specialization)
-                                </!option>
-                            }
-                        </select>
-                    </div>
-
-                    <!-- Date & Timeslot -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12">
-                            <label class="form-label-modern fw-bold mb-1">تاريخ الجلسة</label>
-                            <input type="date" name="appointmentDate" id="qbDateInput" class="form-control form-control-modern fw-bold" value="@selectedDate.ToString("yyyy-MM-dd")" required />
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label-modern fw-bold mb-1">وقت البدء</label>
-                            <input type="time" name="startTime" id="qbStartTime" class="form-control form-control-modern fw-bold" value="10:00" required onchange="calcQbEndTime(this.value)" />
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label-modern fw-bold mb-1">وقت الانتهاء (45 د)</label>
-                            <input type="time" name="endTime" id="qbEndTime" class="form-control form-control-modern" value="10:45" required />
-                        </div>
-                    </div>
-
-                    <!-- Treatment Plan Selector (Optional) -->
-                    <div class="mb-3">
-                        <label class="form-label-modern fw-bold mb-1">البرنامج / الخطة العلاجية</label>
-                        <select name="treatmentPlanId" class="form-select form-control-modern">
-                            <option value="">-- جلسة استشارة وتقييم أولي --</option>
-                            @foreach (var p in activePlans)
-                            {
-                                <option value="@p.Id">@p.Title - @p.Client?.FullName (@(p.CompletedSessions + 1)/@p.TotalSessions)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="mb-2">
-                        <label class="form-label-modern fw-bold mb-1">ملاحظات إضافية</label>
-                        <textarea name="notes" rows="2" class="form-control form-control-modern" placeholder="أية ملاحظات خاصة بالموعد..."></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer border-top bg-light p-3 d-flex justify-content-between">
-                    <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-modern btn-modern-primary px-4">
-                        <i class="bi bi-calendar-check-fill me-1"></i> تأكيد حجز الموعد
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
 <script>
@@ -1197,51 +703,5 @@
             }
         });
     });
-    // Quick Booking Modal Helpers
-    function prepareQuickBookModal(startTime, endTime) {
-        if (startTime) {
-            const startInput = document.getElementById('qbStartTime');
-            if (startInput) startInput.value = startTime;
-
-            if (endTime) {
-                const endInput = document.getElementById('qbEndTime');
-                if (endInput) endInput.value = endTime;
-            } else {
-                calcQbEndTime(startTime);
-            }
-        }
-    }
-
-    function calcQbEndTime(startVal) {
-        if (!startVal) return;
-        const parts = startVal.split(':');
-        if (parts.length === 2) {
-            let h = parseInt(parts[0]);
-            let m = parseInt(parts[1]) + 45;
-            if (m >= 60) {
-                h = (h + Math.floor(m / 60)) % 24;
-                m = m % 60;
-            }
-            const hStr = h < 10 ? '0' + h : h;
-            const mStr = m < 10 ? '0' + m : m;
-            const endInput = document.getElementById('qbEndTime');
-            if (endInput) endInput.value = `${hStr}:${mStr}`;
-        }
-    }
-
-    function filterQbClients(search) {
-        const term = (search || '').toLowerCase().trim();
-        const select = document.getElementById('qbClientSelect');
-        if (!select) return;
-        Array.from(select.options).forEach(opt => {
-            const name = (opt.dataset.name || opt.text || '').toLowerCase();
-            const phone = (opt.dataset.phone || '').toLowerCase();
-            if (!term || name.includes(term) || phone.includes(term)) {
-                opt.style.display = '';
-            } else {
-                opt.style.display = 'none';
-            }
-        });
-    }
 </script>
 }
