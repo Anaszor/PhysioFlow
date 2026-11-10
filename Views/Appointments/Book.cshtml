@@ -1,6 +1,9 @@
 @model PhysioClinic.Models.ViewModels.BookingViewModel
 @{
     ViewData["Title"] = "حجز موعد واختيار الفترة الزمنية";
+    var selectedClient = Model.Clients.FirstOrDefault(c => c.Id == Model.ClientId);
+    var selectedClientText = selectedClient != null ? $"{selectedClient.FullName} ({selectedClient.Phone})" : "";
+    var selectedTherapist = Model.Therapists.FirstOrDefault(t => t.Id == Model.TherapistId) ?? Model.Therapists.FirstOrDefault();
 }
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
@@ -41,9 +44,31 @@
 
                 <div class="card-modern-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <!-- Searchable Dropdown (Type and Filter + Dropdown) -->
+                        <div class="col-md-6 position-relative" id="patientDropdownWrapper">
                             <label class="form-label-modern fw-bold">المريض المستفيد <span class="text-danger">*</span></label>
-                            <select asp-for="ClientId" id="clientSelect" class="form-select form-select-modern" onchange="updateSummary()" required>
+                            
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 0 10px 10px 0;"><i class="bi bi-search"></i></span>
+                                <input type="text" 
+                                       id="patientSearchInput" 
+                                       class="form-control form-control-modern border-start-0 border-end-0" 
+                                       placeholder="🔍 اكتب اسم المريض أو الجوال أو اختر من القائمة..." 
+                                       autocomplete="off" 
+                                       onfocus="openPatientDropdown()" 
+                                       oninput="filterPatients(this.value)"
+                                       onclick="openPatientDropdown()" 
+                                       value="@selectedClientText" />
+                                <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split bg-white text-muted" 
+                                        type="button" 
+                                        id="patientDropdownBtn"
+                                        onclick="togglePatientDropdown()" 
+                                        style="border-radius: 10px 0 0 10px; border-color: var(--border-color);">
+                                </button>
+                            </div>
+
+                            <!-- Hidden standard select for form submission -->
+                            <select asp-for="ClientId" id="clientSelect" class="d-none" required>
                                 <option value="">-- اختر ملف المريض --</option>
                                 @foreach (var c in Model.Clients)
                                 {
@@ -51,6 +76,29 @@
                                 }
                             </select>
                             <span asp-validation-for="ClientId" class="text-danger small"></span>
+
+                            <!-- Floating Dropdown Menu -->
+                            <div id="patientDropdownMenu" class="dropdown-menu shadow-lg border p-1 w-100 position-absolute" style="display: none; max-height: 250px; overflow-y: auto; z-index: 1050; top: 100%; border-radius: 0.75rem; background: #ffffff;">
+                                @foreach (var c in Model.Clients)
+                                {
+                                    <a class="dropdown-item py-2 px-3 rounded-2 d-flex align-items-center justify-content-between patient-item @(Model.ClientId == c.Id ? "active bg-teal-subtle text-teal fw-bold" : "")" 
+                                       href="javascript:void(0)" 
+                                       data-id="@c.Id" 
+                                       data-name="@c.FullName" 
+                                       data-phone="@c.Phone"
+                                       onclick="selectPatient('@c.Id', '@c.FullName', '@c.Phone')">
+                                        <div>
+                                            <span class="fw-bold text-dark d-block" style="font-size: 0.88rem;">@c.FullName</span>
+                                            <small class="text-muted" dir="ltr"><i class="bi bi-telephone me-1"></i>@c.Phone</small>
+                                        </div>
+                                        <i class="bi bi-check2 text-teal @(Model.ClientId == c.Id ? "" : "d-none") check-icon" style="color: var(--primary);"></i>
+                                    </a>
+                                }
+                                <div id="noPatientsFound" class="text-center py-3 text-muted small d-none">
+                                    <i class="bi bi-person-x d-block fs-5 mb-1"></i>
+                                    لا يوجد مريض مطابق للبحث
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
@@ -87,14 +135,17 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label-modern fw-bold">الأخصائي المشرف <span class="text-danger">*</span></label>
-                            <select asp-for="TherapistId" id="therapistSelect" class="form-select form-select-modern" onchange="loadSlotsAjax()">
+                            <select asp-for="TherapistId" id="therapistSelect" class="form-select form-select-modern" onchange="onTherapistChanged()">
                                 @foreach (var th in Model.Therapists)
                                 {
-                                    <option value="@th.Id" data-name="@th.FullName" selected="@(Model.TherapistId == th.Id)">
-                                        @th.Title @th.FullName (@th.Specialization)
+                                    <option value="@th.Id" data-name="@th.FullName" data-title="@th.Title" data-spec="@th.Specialization" selected="@(Model.TherapistId == th.Id)">
+                                        @th.FullName
                                     </option>
                                 }
                             </select>
+                            <div class="small text-muted mt-1 text-truncate" id="therapistSubtitle" style="font-size: 0.78rem;">
+                                @(selectedTherapist?.Title ?? "أخصائي معالج")
+                            </div>
                             <span asp-validation-for="TherapistId" class="text-danger small"></span>
                         </div>
 
@@ -263,6 +314,90 @@
 
 @section Scripts {
     <script>
+        function openPatientDropdown() {
+            const menu = document.getElementById('patientDropdownMenu');
+            if (menu) menu.style.display = 'block';
+        }
+
+        function closePatientDropdown() {
+            const menu = document.getElementById('patientDropdownMenu');
+            if (menu) menu.style.display = 'none';
+        }
+
+        function togglePatientDropdown() {
+            const menu = document.getElementById('patientDropdownMenu');
+            if (!menu) return;
+            if (menu.style.display === 'block') {
+                closePatientDropdown();
+            } else {
+                openPatientDropdown();
+                document.getElementById('patientSearchInput').focus();
+            }
+        }
+
+        function filterPatients(searchTerm) {
+            openPatientDropdown();
+            const term = (searchTerm || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.patient-item');
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const name = (item.dataset.name || '').toLowerCase();
+                const phone = (item.dataset.phone || '').toLowerCase();
+                if (!term || name.includes(term) || phone.includes(term)) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            const noFound = document.getElementById('noPatientsFound');
+            if (noFound) {
+                if (visibleCount === 0) {
+                    noFound.classList.remove('d-none');
+                } else {
+                    noFound.classList.add('d-none');
+                }
+            }
+        }
+
+        function selectPatient(id, name, phone) {
+            const selectEl = document.getElementById('clientSelect');
+            if (selectEl) selectEl.value = id;
+            
+            document.getElementById('patientSearchInput').value = `${name} (${phone})`;
+            
+            document.querySelectorAll('.patient-item').forEach(item => {
+                const isMatch = item.dataset.id === id;
+                item.classList.toggle('active', isMatch);
+                item.classList.toggle('bg-teal-subtle', isMatch);
+                const check = item.querySelector('.check-icon');
+                if (check) check.classList.toggle('d-none', !isMatch);
+            });
+
+            closePatientDropdown();
+            updateSummary();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('patientDropdownWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                closePatientDropdown();
+            }
+        });
+
+        function onTherapistChanged() {
+            const sel = document.getElementById('therapistSelect');
+            const opt = sel.options[sel.selectedIndex];
+            const sub = document.getElementById('therapistSubtitle');
+            if (sub && opt) {
+                sub.innerText = opt.dataset.title || opt.dataset.spec || '';
+            }
+            loadSlotsAjax();
+        }
+
         function pickSlot(time, element) {
             document.querySelectorAll('.timeslot-pill').forEach(el => el.classList.remove('selected'));
             if (element) element.classList.add('selected');
@@ -360,11 +495,19 @@
 
         function updateSummary() {
             const clientSelect = document.getElementById('clientSelect');
-            const clientName = clientSelect.options[clientSelect.selectedIndex]?.dataset.name || clientSelect.options[clientSelect.selectedIndex]?.text || "--";
+            const selectedClientId = clientSelect ? clientSelect.value : null;
+            let clientName = "-- لم يتم التحديد --";
+            
+            if (selectedClientId) {
+                const activeItem = document.querySelector(`.patient-item[data-id="${selectedClientId}"]`);
+                if (activeItem) {
+                    clientName = activeItem.dataset.name + ' (' + activeItem.dataset.phone + ')';
+                }
+            }
             document.getElementById('summaryClient').innerText = clientName;
 
             const therapistSelect = document.getElementById('therapistSelect');
-            const thName = therapistSelect.options[therapistSelect.selectedIndex]?.text || "--";
+            const thName = therapistSelect.options[therapistSelect.selectedIndex]?.dataset.name || therapistSelect.options[therapistSelect.selectedIndex]?.text || "--";
             document.getElementById('summaryTherapist').innerText = thName;
 
             const planSelect = document.getElementById('planSelect');

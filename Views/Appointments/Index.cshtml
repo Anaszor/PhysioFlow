@@ -55,11 +55,11 @@
                 {
                     if (therapistId == th.Id)
                     {
-                        <option value="@th.Id" selected>@th.FullName (@th.Specialization)</option>
+                        <option value="@th.Id" selected>@th.FullName</option>
                     }
                     else
                     {
-                        <option value="@th.Id">@th.FullName (@th.Specialization)</option>
+                        <option value="@th.Id">@th.FullName</option>
                     }
                 }
             </select>
@@ -438,7 +438,7 @@
                                                             @foreach (var th in therapists)
                                                             {
                                                                 <!option value="@th.Id" @(th.Id == appt.TherapistId ? "selected" : "")>
-                                                                    @th.Title @th.FullName - @th.Specialization
+                                                                    @th.FullName
                                                                 </!option>
                                                             }
                                                         </select>
