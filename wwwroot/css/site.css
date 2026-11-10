@@ -915,4 +915,166 @@ ul.nav li, ul.nav-pills li, .segmented-tabs li {
     box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35) !important;
 }
 
+/* ==========================================================================
+   Unified Row Action Buttons (Clean, Consistent, No Dropdowns)
+   ========================================================================== */
+.row-actions-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+}
+
+.row-action-btn {
+    height: 36px;
+    padding: 0 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    text-decoration: none !important;
+    box-sizing: border-box;
+}
+
+.row-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.row-action-btn:active {
+    transform: translateY(0);
+}
+
+/* 1. Clinical / Documentation Button (توثيق الجلسة) */
+.row-action-clinical {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    color: #ffffff !important;
+    border-color: #0d9488;
+    box-shadow: 0 2px 5px rgba(13, 148, 136, 0.28);
+}
+
+.row-action-clinical:hover {
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(13, 148, 136, 0.38);
+}
+
+/* Clinical Report Button (تفاصيل الجلسة / التقرير) */
+.row-action-report {
+    background: #f0fdfa;
+    color: #0d9488 !important;
+    border-color: #99f6e4;
+}
+
+.row-action-report:hover {
+    background: #0d9488;
+    color: #ffffff !important;
+    border-color: #0d9488;
+}
+
+/* 2. Arrival Confirmation Button (وصل بالعيادة) */
+.row-action-arrival {
+    background: #eff6ff;
+    color: #1d4ed8 !important;
+    border-color: #bfdbfe;
+}
+
+.row-action-arrival:hover {
+    background: #2563eb;
+    color: #ffffff !important;
+    border-color: #2563eb;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+}
+
+/* Already Arrived Badge */
+.row-action-arrived-badge {
+    background: #ecfdf5;
+    color: #059669 !important;
+    border-color: #a7f3d0;
+    cursor: default;
+}
+
+.row-action-arrived-badge:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* 3. WhatsApp Button */
+.row-action-whatsapp {
+    background: #ecfdf5;
+    color: #047857 !important;
+    border-color: #a7f3d0;
+}
+
+.row-action-whatsapp:hover {
+    background: #10b981;
+    color: #ffffff !important;
+    border-color: #10b981;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* 4. Edit Appointment Button (تعديل) */
+.row-action-edit {
+    background: #f8fafc;
+    color: #334155 !important;
+    border-color: #cbd5e1;
+}
+
+.row-action-edit:hover {
+    background: #334155;
+    color: #ffffff !important;
+    border-color: #334155;
+    box-shadow: 0 3px 8px rgba(51, 65, 85, 0.25);
+}
+
+/* 5. Cancel Button (إلغاء) */
+.row-action-cancel {
+    background: #fffbeb;
+    color: #b45309 !important;
+    border-color: #fde68a;
+}
+
+.row-action-cancel:hover {
+    background: #f59e0b;
+    color: #ffffff !important;
+    border-color: #f59e0b;
+    box-shadow: 0 3px 8px rgba(245, 158, 11, 0.3);
+}
+
+/* 6. Delete Button (حذف) */
+.row-action-delete {
+    background: #fff1f2;
+    color: #e11d48 !important;
+    border-color: #fecdd3;
+    padding: 0 0.65rem;
+}
+
+.row-action-delete:hover {
+    background: #e11d48;
+    color: #ffffff !important;
+    border-color: #e11d48;
+    box-shadow: 0 3px 8px rgba(225, 29, 72, 0.3);
+}
+
+/* 7. PDF Report Button */
+.row-action-pdf {
+    background: #fff1f2;
+    color: #dc2626 !important;
+    border-color: #fecaca;
+}
+
+.row-action-pdf:hover {
+    background: #dc2626;
+    color: #ffffff !important;
+    border-color: #dc2626;
+}
+
+
 

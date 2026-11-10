@@ -159,7 +159,7 @@
                                         </a>
                                         @if (User.IsInRole(ClinicRoles.Admin) || User.IsInRole(ClinicRoles.Receptionist))
                                         {
-                                            <button type="button" class="btn btn-link btn-sm p-0 text-muted ms-1" data-bs-toggle="modal" data-bs-target="#editPatientModal-@appt.ClientId" title="تعديل بيانات المريض">
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-muted ms-1" data-bs-toggle="modal" data-bs-target="#editPatientModal-@appt.Id" title="تعديل بيانات المريض">
                                                 <i class="bi bi-pencil-square text-primary" style="font-size: 0.85rem;"></i>
                                             </button>
                                         }
@@ -234,31 +234,31 @@
                                     }
                                 </td>
                                 <td class="text-start">
-                                    <div class="d-flex align-items-center gap-1 justify-content-end">
-                                        <!-- Primary Documentation / Report Action -->
+                                    <div class="row-actions-group justify-content-end">
+                                        <!-- 1. Doctor / Clinical Action -->
                                         @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
                                         {
                                             @if (appt.Status != "Completed")
                                             {
-                                                <button type="button" class="btn btn-sm btn-modern btn-modern-primary py-1 px-2 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="توثيق الجلسة والتوقيع">
+                                                <button type="button" class="row-action-btn row-action-clinical" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="توثيق الجلسة السريرية">
                                                     <i class="bi bi-file-earmark-medical"></i>
                                                     <span>توثيق الجلسة</span>
                                                 </button>
                                             }
                                             else
                                             {
-                                                <button type="button" class="btn btn-sm btn-light border py-1 px-2 text-success d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="عرض وتعديل التقرير">
+                                                <button type="button" class="row-action-btn row-action-report" data-bs-toggle="modal" data-bs-target="#sessionModal-@appt.Id" title="عرض تفاصيل الجلسة والتقرير">
                                                     <i class="bi bi-check2-circle"></i>
-                                                    <span>التقرير</span>
+                                                    <span>تفاصيل الجلسة</span>
                                                 </button>
-                                                <a asp-action="SessionReport" asp-route-id="@appt.Id" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-2 d-inline-flex align-items-center gap-1" title="طباعة أو تحميل تقرير الجلسة بصيغة PDF">
+                                                <a asp-action="SessionReport" asp-route-id="@appt.Id" target="_blank" class="row-action-btn row-action-pdf" title="طباعة أو تحميل تقرير الجلسة PDF">
                                                     <i class="bi bi-file-earmark-pdf"></i>
                                                     <span>PDF</span>
                                                 </a>
                                             }
                                         }
 
-                                        <!-- Receptionist & Admin Quick Actions -->
+                                        <!-- 2. Arrival Action (وصل بالعيادة) -->
                                         @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
                                         {
                                             @if (appt.Status == "Scheduled")
@@ -266,64 +266,53 @@
                                                 <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="id" value="@appt.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1" title="تأكيد وصول المريض بالعيادة">
+                                                    <button type="submit" class="row-action-btn row-action-arrival" title="تأكيد وصول المريض بالعيادة">
                                                         <i class="bi bi-person-check-fill"></i>
-                                                        <span>وصل</span>
-                                                    </button>
-                                                </form>
-
-                                                <form asp-action="SendReminder" method="post" class="d-inline m-0" onsubmit="return confirm('هل تريد إرسال رسالة تذكير بالموعد للمريض عبر واتساب؟');">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="id" value="@appt.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2" title="إرسال تذكير واتساب للمريض">
-                                                        <i class="bi bi-whatsapp"></i>
+                                                        <span>وصل بالعيادة</span>
                                                     </button>
                                                 </form>
                                             }
+                                            else if (appt.Status == "Confirmed")
+                                            {
+                                                <span class="row-action-btn row-action-arrived-badge" title="المريض حاضر بالعيادة">
+                                                    <i class="bi bi-check-circle-fill"></i>
+                                                    <span>حاضر بالعيادة</span>
+                                                </span>
+                                            }
+
+                                            <!-- 3. WhatsApp Action (Consistent Style) -->
+                                            <form asp-action="SendReminder" method="post" class="d-inline m-0" onsubmit="return confirm('هل تريد إرسال رسالة تذكير بالموعد للمريض عبر واتساب؟');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@appt.Id" />
+                                                <button type="submit" class="row-action-btn row-action-whatsapp" title="إرسال تذكير واتساب للمريض">
+                                                    <i class="bi bi-whatsapp"></i>
+                                                    <span>واتساب</span>
+                                                </button>
+                                            </form>
+
+                                            <!-- 4. Edit Appointment Button (Direct, No Dropdown) -->
+                                            <button type="button" class="row-action-btn row-action-edit" data-bs-toggle="modal" data-bs-target="#editApptModal-@appt.Id" title="تعديل الموعد والأخصائي">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span>تعديل</span>
+                                            </button>
+
+                                            <!-- 5. Cancel Button (Direct, No Dropdown) -->
+                                            @if (appt.Status != "Cancelled")
+                                            {
+                                                <button type="button" class="row-action-btn row-action-cancel" onclick="if(confirm('هل أنت متأكد من إلغاء هذا الموعد؟')) document.getElementById('cancelForm-@appt.Id').submit();" title="إلغاء الموعد">
+                                                    <i class="bi bi-x-circle"></i>
+                                                    <span>إلغاء</span>
+                                                </button>
+                                            }
                                         }
 
-                                        <!-- Enhanced Actions Dropdown Menu -->
-                                        <div class="dropdown d-inline-block">
-                                            <button class="btn btn-sm btn-light border py-1 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="خيارات إضافية">
-                                                <i class="bi bi-three-dots-vertical"></i>
+                                        <!-- 6. Delete Button (Admin Only, Direct) -->
+                                        @if (User.IsInRole(ClinicRoles.Admin))
+                                        {
+                                            <button type="button" class="row-action-btn row-action-delete" onclick="if(confirm('تحذير: هل أنت متأكد من حذف هذا الموعد نهائياً من قاعدة البيانات؟')) document.getElementById('deleteForm-@appt.Id').submit();" title="حذف الموعد نهائياً">
+                                                <i class="bi bi-trash"></i>
                                             </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2" style="font-size: 0.85rem; border-radius: 0.75rem;">
-                                                @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
-                                                {
-                                                    <li>
-                                                        <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#editApptModal-@appt.Id">
-                                                            <i class="bi bi-calendar2-event text-primary"></i>
-                                                            <span>تعديل الموعد والأخصائي</span>
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#editPatientModal-@appt.Id">
-                                                            <i class="bi bi-person-gear text-info"></i>
-                                                            <span>تعديل بيانات المريض</span>
-                                                        </button>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider my-1"></li>
-                                                    @if (appt.Status != "Cancelled")
-                                                    {
-                                                        <li>
-                                                            <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning" onclick="if(confirm('هل أنت متأكد من إلغاء هذا الموعد؟')) document.getElementById('cancelForm-@appt.Id').submit();">
-                                                                <i class="bi bi-x-circle"></i>
-                                                                <span>إلغاء الموعد</span>
-                                                            </button>
-                                                        </li>
-                                                    }
-                                                }
-                                                @if (User.IsInRole(ClinicRoles.Admin))
-                                                {
-                                                    <li>
-                                                        <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" onclick="if(confirm('تحذير: هل أنت متأكد من حذف هذا الموعد نهائياً من قاعدة البيانات؟')) document.getElementById('deleteForm-@appt.Id').submit();">
-                                                            <i class="bi bi-trash"></i>
-                                                            <span>حذف الموعد نهائياً</span>
-                                                        </button>
-                                                    </li>
-                                                }
-                                            </ul>
-                                        </div>
+                                        }
 
                                         <!-- Hidden Forms for Cancel and Delete -->
                                         <form id="cancelForm-@appt.Id" asp-action="CancelAppointment" method="post" class="d-none">
@@ -713,21 +702,24 @@
                                             <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@slot.AppointmentId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="تأكيد وصول المريض">
-                                                    <i class="bi bi-person-check-fill me-1"></i> وصل
+                                                <button type="submit" class="row-action-btn row-action-arrival" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="تأكيد وصول المريض">
+                                                    <i class="bi bi-person-check-fill"></i>
+                                                    <span>وصل</span>
                                                 </button>
                                             </form>
                                         }
                                         @if (!string.IsNullOrEmpty(slot.ClientPhone))
                                         {
-                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="واتساب المريض">
+                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="row-action-btn row-action-whatsapp" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="واتساب المريض">
                                                 <i class="bi bi-whatsapp"></i>
+                                                <span>واتساب</span>
                                             </a>
                                         }
                                         @if (slot.AppointmentId.HasValue)
                                         {
-                                            <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
-                                                <i class="bi bi-pencil"></i>
+                                            <button type="button" class="row-action-btn row-action-edit" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span>تعديل</span>
                                             </button>
                                         }
                                     </div>
@@ -818,21 +810,24 @@
                                             <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@slot.AppointmentId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="تأكيد وصول المريض">
-                                                    <i class="bi bi-person-check-fill me-1"></i> وصل
+                                                <button type="submit" class="row-action-btn row-action-arrival" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="تأكيد وصول المريض">
+                                                    <i class="bi bi-person-check-fill"></i>
+                                                    <span>وصل</span>
                                                 </button>
                                             </form>
                                         }
                                         @if (!string.IsNullOrEmpty(slot.ClientPhone))
                                         {
-                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="واتساب المريض">
+                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="row-action-btn row-action-whatsapp" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="واتساب المريض">
                                                 <i class="bi bi-whatsapp"></i>
+                                                <span>واتساب</span>
                                             </a>
                                         }
                                         @if (slot.AppointmentId.HasValue)
                                         {
-                                            <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
-                                                <i class="bi bi-pencil"></i>
+                                            <button type="button" class="row-action-btn row-action-edit" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span>تعديل</span>
                                             </button>
                                         }
                                     </div>
@@ -923,21 +918,24 @@
                                             <form asp-action="ConfirmAttendance" method="post" class="d-inline m-0">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@slot.AppointmentId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="تأكيد وصول المريض">
-                                                    <i class="bi bi-person-check-fill me-1"></i> وصل
+                                                <button type="submit" class="row-action-btn row-action-arrival" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="تأكيد وصول المريض">
+                                                    <i class="bi bi-person-check-fill"></i>
+                                                    <span>وصل</span>
                                                 </button>
                                             </form>
                                         }
                                         @if (!string.IsNullOrEmpty(slot.ClientPhone))
                                         {
-                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="واتساب المريض">
+                                            <a href="https://wa.me/@(slot.ClientPhone.Replace("+", "").Replace(" ", ""))" target="_blank" class="row-action-btn row-action-whatsapp" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" title="واتساب المريض">
                                                 <i class="bi bi-whatsapp"></i>
+                                                <span>واتساب</span>
                                             </a>
                                         }
                                         @if (slot.AppointmentId.HasValue)
                                         {
-                                            <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
-                                                <i class="bi bi-pencil"></i>
+                                            <button type="button" class="row-action-btn row-action-edit" style="height: 30px; padding: 0 0.6rem; font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#editApptModal-@slot.AppointmentId" title="تعديل الموعد">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span>تعديل</span>
                                             </button>
                                         }
                                     </div>
