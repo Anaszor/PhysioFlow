@@ -1,6 +1,6 @@
 @using PhysioClinic.Services.WhatsApp
 @{
-    ViewData["Title"] = "إدارة أتمتة رسائل واتساب";
+    ViewData["Title"] = "إدارة أتمتة رسائل واتساب السحابية";
     var settings = ViewBag.Settings as WhatsAppSettings ?? new WhatsAppSettings();
     var status = ViewBag.Status as WhatsAppSessionStatus ?? new WhatsAppSessionStatus();
     var qrCode = ViewBag.QrCode as string;
@@ -10,19 +10,19 @@
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div>
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success-subtle text-success p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <span class="badge bg-success-subtle text-success p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                 <i class="bi bi-whatsapp"></i>
             </span>
             <div>
-                <h3 class="fw-bold mb-0 text-dark">نظام أتمتة رسائل واتساب للعيادة</h3>
-                <p class="text-muted mb-0 small">ربط وإرسال الإشعارات وتأكيدات المواعيد للمرضى آلياً عبر رقمك الرسمي (@settings.SenderNumber)</p>
+                <h3 class="fw-bold mb-0 text-dark">أتمتة رسائل واتساب السحابية</h3>
+                <p class="text-muted mb-0 small">خدمة مدمجة سحابياً 100% لإرسال تأكيدات وإشعارات المواعيد آلياً من الخادم دون الحاجة لأي برامج محلية</p>
             </div>
         </div>
     </div>
 
     <div class="d-flex gap-2">
         <a asp-action="Index" class="btn btn-modern btn-modern-soft btn-sm">
-            <i class="bi bi-arrow-clockwise me-1"></i> تحديث الحالة
+            <i class="bi bi-arrow-clockwise me-1"></i> فحص الاتصال وتحديث الحالة
         </a>
     </div>
 </div>
@@ -32,30 +32,30 @@
     <div class="col-md-4">
         <div class="card-modern p-3 h-100">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="text-muted small fw-semibold">حالة اتصال البوابة المحلية</span>
-                <span class="badge @(status.IsServerReachable ? "bg-success" : "bg-danger") px-2 py-1">
-                    @(status.IsServerReachable ? "متصل بالبوابة" : "البوابة غير متصلة")
-                </span>
+                <span class="text-muted small fw-semibold">نوع المزود السحابي</span>
+                <span class="badge bg-primary-subtle text-primary px-2 py-1">Direct Cloud API</span>
             </div>
             <h5 class="fw-bold text-dark mb-1">
-                <i class="bi bi-hdd-network me-1 text-primary"></i> localhost:2785
+                <i class="bi bi-cloud-check-fill me-1 text-success"></i> @settings.Provider
             </h5>
-            <small class="text-muted">مجلد: C:\Users\Owner\Downloads\Whatsapp Automation</small>
+            <small class="text-muted">يعمل مباشرة من السيرفر السحابي (MonsterASP)</small>
         </div>
     </div>
 
     <div class="col-md-4">
         <div class="card-modern p-3 h-100">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="text-muted small fw-semibold">حالة جلسة الواتساب</span>
-                <span class="badge @(status.IsReady ? "bg-success" : (status.Status == "qr_ready" ? "bg-warning text-dark" : "bg-secondary")) px-2 py-1" id="badgeSessionStatus">
-                    @(status.IsReady ? "متصل وجاهز للإرسال 🟢" : (status.Status == "qr_ready" ? "بانتظار ربط الهاتف 🟡" : status.Status))
+                <span class="text-muted small fw-semibold">حالة الربط والإرسال</span>
+                <span class="badge @(status.IsReady ? "bg-success" : (status.Status == "qr_ready" ? "bg-warning text-dark" : (status.Status == "not_configured" ? "bg-info text-dark" : "bg-secondary"))) px-2 py-1" id="badgeSessionStatus">
+                    @(status.IsReady ? "متصل وجاهز للإرسال 🟢" : (status.Status == "qr_ready" ? "بانتظار مسح رمز QR 🟡" : (status.Status == "not_configured" ? "بحاجة لإدخال المفاتيح ⚙️" : status.Status)))
                 </span>
             </div>
             <h5 class="fw-bold text-dark mb-1" id="textSessionPhone">
-                @(status.IsReady ? (status.Phone ?? settings.SenderNumber) : (status.Status == "qr_ready" ? "بانتظار المسح أو الكود" : "غير متصل"))
+                @(status.IsReady ? (status.Phone ?? settings.SenderNumber) : (status.Status == "qr_ready" ? "امسح الـ QR للربط" : "غير مربوط"))
             </h5>
-            <small class="text-muted">جلسة: physioclinic (@settings.SessionId.Substring(0, 8)...)</small>
+            <small class="text-muted">
+                @(string.IsNullOrEmpty(settings.InstanceId) ? "لم يتم ضبط معرّف الحساب بعد" : $"معرّف الحساب: {settings.InstanceId}")
+            </small>
         </div>
     </div>
 
@@ -63,125 +63,120 @@
         <div class="card-modern p-3 h-100">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="text-muted small fw-semibold">رقم الإرسال المعتمد</span>
-                <span class="badge bg-primary-subtle text-primary px-2 py-1">الأردن (+962)</span>
+                <span class="badge bg-success px-2 py-1">نشط</span>
             </div>
             <h5 class="fw-bold text-dark mb-1 dir-ltr text-end">@settings.SenderNumber</h5>
-            <small class="text-muted">ترسل التأكيدات والتذكيرات باسم: @settings.ClinicName</small>
+            <small class="text-muted">اسم المرسل: @settings.ClinicName</small>
         </div>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Linking / Pairing Card -->
+    <!-- Cloud Configuration Card -->
     <div class="col-lg-6">
-        <div class="card-modern p-4 h-100">
+        <div class="card-modern p-4 mb-4">
             <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                 <h5 class="fw-bold mb-0 text-dark">
-                    <i class="bi bi-qr-code-scan me-1 text-success"></i> ربط رقمك بالواتساب (@settings.SenderNumber)
+                    <i class="bi bi-sliders me-1 text-primary"></i> إعدادات المزود السحابي المباشر
                 </h5>
-                @if (status.Status != "ready" && status.Status != "qr_ready")
-                {
-                    <form asp-action="Start" method="post" class="m-0">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-modern btn-modern-primary">
-                            <i class="bi bi-play-circle me-1"></i> تشغيل الجلسة
-                        </button>
-                    </form>
-                }
+                <span class="badge bg-light text-dark border">تحديث فوري</span>
             </div>
 
-            @if (status.IsReady)
-            {
-                <div class="text-center py-4">
-                    <div class="mb-3">
-                        <span class="rounded-circle bg-success text-white p-3 d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px; font-size: 2rem;">
-                            <i class="bi bi-check-lg"></i>
-                        </span>
-                    </div>
-                    <h5 class="fw-bold text-success mb-2">تم ربط رقم الواتساب بنجاح!</h5>
-                    <p class="text-muted small mb-3">الرقم المتصل حالياً: <strong>@(status.Phone ?? settings.SenderNumber)</strong> (@(status.PushName ?? "PhysioFlow"))</p>
-                    <div class="alert alert-success d-inline-block small text-start px-3 py-2">
-                        <i class="bi bi-shield-check me-1"></i> النظام يرسل الآن رسائل الواتساب الآلية للمرضى بنجاح عند حجز المواعيد أو إرسال التذكيرات.
-                    </div>
-                </div>
-            }
-            else
-            {
+            <p class="text-muted small mb-3">
+                يتم الإرسال السحابي الآلي مباشرة عبر المزود (مثل <strong>Green-API</strong> أو <strong>UltraMsg</strong>) دون الحاجة لأي برامج على جهازك.
+            </p>
+
+            <form asp-action="SaveSettings" method="post">
+                @Html.AntiForgeryToken()
+
                 <div class="mb-3">
-                    <p class="text-muted small">
-                        يمكنك ربط واتساب مباشرة برقمك عبر <strong>كود الربط المكون من 8 خانات</strong> دون الحاجة لتوجيه الكاميرا، أو عبر مسح رمز الاستجابة السريعة (QR Code).
-                    </p>
+                    <label class="form-label small fw-semibold">المزود السحابي (Provider)</label>
+                    <select name="provider" class="form-select form-control-modern">
+                        <option value="GreenApi" selected="@(settings.Provider == "GreenApi")">Green-API (سحابي مباشر - مجاني تجريبي)</option>
+                        <option value="UltraMsg" selected="@(settings.Provider == "UltraMsg")">UltraMsg (سحابي مباشر)</option>
+                        <option value="Gateway" selected="@(settings.Provider == "Gateway")">Custom Gateway / Node Gateway</option>
+                    </select>
                 </div>
 
-                <!-- Pairing Code Section -->
-                <div class="card bg-light border-0 p-3 mb-4 rounded-3">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <h6 class="fw-bold mb-0 text-dark">
-                            <i class="bi bi-key-fill text-warning me-1"></i> الخيار الأسهل: كود الربط بالهاتف (Pairing Code)
-                        </h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">معرّف الحساب (IdInstance / InstanceId)</label>
+                        <input type="text" name="instanceId" value="@settings.InstanceId" class="form-control form-control-modern dir-ltr" placeholder="مثال: 7103123456" required />
                     </div>
-
-                    <form asp-action="RequestPairing" method="post" class="d-flex gap-2 mb-3">
-                        @Html.AntiForgeryToken()
-                        <input type="text" name="phoneNumber" value="@settings.SenderNumber" class="form-control form-control-modern text-center fw-bold dir-ltr" placeholder="+962786363593" style="max-width: 220px;" />
-                        <button type="submit" class="btn btn-modern btn-modern-primary flex-grow-1">
-                            <i class="bi bi-phone me-1"></i> توليد كود الربط لرقمي
-                        </button>
-                    </form>
-
-                    @if (!string.IsNullOrEmpty(pairingCode))
-                    {
-                        <div class="text-center p-3 bg-white rounded-3 border border-success border-2 shadow-sm mb-3">
-                            <span class="text-muted small d-block mb-1">كود الربط الخاص بك (صالح لمدة دقيقة):</span>
-                            <div class="fs-1 fw-bold tracking-wider text-success dir-ltr py-1 user-select-all" id="displayPairingCode">
-                                @pairingCode
-                            </div>
-                            <small class="text-muted">أدخل هذا الكود في تطبيق واتساب على هاتفك الآن</small>
-                        </div>
-                    }
-
-                    <div class="small text-muted bg-white p-2 rounded-2 border">
-                        <strong class="d-block text-dark mb-1">طريقة الإدخال في هاتفك:</strong>
-                        <ol class="mb-0 ps-3 pe-0">
-                            <li>افتح واتساب في هاتفك (@settings.SenderNumber).</li>
-                            <li>اضغط على (الإعدادات ⚙️ أو النقاط الثلاث) ثم <strong>الأجهزة المرتبطة (Linked Devices)</strong>.</li>
-                            <li>اضغط على <strong>ربط جهاز (Link a Device)</strong>.</li>
-                            <li>اضغط في الأسفل على <strong>"الربط برقم الهاتف بدلاً من ذلك" (Link with phone number instead)</strong>.</li>
-                            <li>أدخل الكود المكون من 8 أحرف وأرقام الظاهر أعلاه.</li>
-                        </ol>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">رمز الأمان (ApiToken / Token)</label>
+                        <input type="password" name="apiToken" value="@settings.ApiToken" class="form-control form-control-modern dir-ltr" placeholder="رمز الـ Token السري" required />
                     </div>
                 </div>
 
-                <!-- QR Code Alternative -->
-                <div class="card bg-light border-0 p-3 rounded-3 text-center">
-                    <h6 class="fw-bold mb-2 text-dark">
-                        <i class="bi bi-qr-code text-primary me-1"></i> أو امسح رمز QR بواسطة كاميرا واتساب
-                    </h6>
-                    <div class="d-flex justify-content-center my-2" id="qrContainer">
-                        @if (!string.IsNullOrEmpty(qrCode))
-                        {
-                            <img src="@qrCode" alt="WhatsApp QR Code" class="img-fluid rounded-3 shadow-sm border bg-white p-2" style="max-width: 200px;" id="qrImage" />
-                        }
-                        else
-                        {
-                            <div class="p-4 bg-white rounded-3 border text-muted small" style="min-width: 180px;">
-                                <i class="bi bi-hourglass-split fs-3 d-block mb-1"></i>
-                                جاري تجهيز رمز QR...
-                            </div>
-                        }
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">رقم هاتف العيادة المرسل</label>
+                        <input type="text" name="senderNumber" value="@settings.SenderNumber" class="form-control form-control-modern dir-ltr text-end" placeholder="+962786363593" required />
                     </div>
-                    <small class="text-muted">يتم تحديث الرمز تلقائياً كل دقيقة حتى يتم المسح والربط.</small>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">اسم العيادة في الرسائل</label>
+                        <input type="text" name="clinicName" value="@settings.ClinicName" class="form-control form-control-modern" required />
+                    </div>
                 </div>
-            }
+
+                <div class="mb-3 p-3 bg-light rounded-3">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="autoSendOnBooking" value="true" id="chkBooking" @(settings.AutoSendOnBooking ? "checked" : "") />
+                        <label class="form-check-label small fw-semibold" for="chkBooking">
+                            إرسال تأكيد الحجز للمريض تلقائياً عند حجز الجلسة
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" name="autoSendOnCancel" value="true" id="chkCancel" @(settings.AutoSendOnCancel ? "checked" : "") />
+                        <label class="form-check-label small fw-semibold" for="chkCancel">
+                            إرسال إشعار للمريض تلقائياً عند إلغاء الجلسة
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-modern btn-modern-primary w-100">
+                    <i class="bi bi-save me-1"></i> حفظ وتطبيق الإعدادات
+                </button>
+            </form>
+        </div>
+
+        <!-- How to get free credentials box -->
+        <div class="card border-0 bg-light p-3 rounded-3">
+            <h6 class="fw-bold mb-2 text-dark">
+                <i class="bi bi-info-circle-fill text-info me-1"></i> كيف تحصل على مفاتيح الربط المجانية في دقيقتين؟
+            </h6>
+            <ol class="small text-muted mb-0 ps-3">
+                <li>ادخل وسجل مجاناً في موقع <strong><a href="https://green-api.com" target="_blank" class="text-decoration-none fw-semibold">Green-API.com</a></strong> (أو <a href="https://ultramsg.com" target="_blank" class="text-decoration-none fw-semibold">UltraMsg.com</a>).</li>
+                <li>ستحصل فوراً على حساب تجريبي مجاني يظهر لك فيه: <strong>IdInstance</strong> و <strong>ApiToken</strong>.</li>
+                <li>امسح رمز الـ QR الظاهر في لوحة تحكمهم بواسطة واتساب على هاتفك لمرة واحدة فقط.</li>
+                <li>انسخ الـ IdInstance والـ ApiToken والصقهما في النموذج أعلاه واضغط <strong>حفظ</strong>.</li>
+            </ol>
         </div>
     </div>
 
-    <!-- Test Message & Automation Preview -->
+    <!-- Right Column: QR Scan & Test Message -->
     <div class="col-lg-6">
+        @if (!string.IsNullOrEmpty(qrCode))
+        {
+            <!-- QR Code Card -->
+            <div class="card-modern p-4 mb-4 text-center">
+                <h5 class="fw-bold mb-2 text-dark">
+                    <i class="bi bi-qr-code-scan text-success me-1"></i> امسح رمز الاستجابة السريعة (QR Code)
+                </h5>
+                <p class="text-muted small mb-3">افتح واتساب في هاتفك > الأجهزة المرتبطة > ربط جهاز > وجّه الكاميرا نحو الرمز التالي:</p>
+
+                <div class="d-flex justify-content-center my-3" id="qrContainer">
+                    <img src="@qrCode" alt="WhatsApp QR Code" class="img-fluid rounded-3 shadow border bg-white p-3" style="max-width: 240px;" id="qrImage" />
+                </div>
+                <small class="text-muted d-block">يتم تحديث الرمز تلقائياً حتى يكتمل الربط.</small>
+            </div>
+        }
+
         <!-- Test Message Card -->
         <div class="card-modern p-4 mb-4">
             <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
-                <i class="bi bi-send-fill me-1 text-primary"></i> إرسال رسالة واتساب تجريبية
+                <i class="bi bi-send-fill me-1 text-primary"></i> إرسال رسالة واتساب تجريبية فورية
             </h5>
             <p class="text-muted small">
                 يمكنك تجربة إرسال رسالة فورية لأي رقم هاتف للتحقق من الاتصال ووصول الرسالة.
@@ -197,70 +192,46 @@
 
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">نص الرسالة</label>
-                    <textarea name="message" rows="3" class="form-control form-control-modern" required>مرحباً بك! هذه رسالة تجريبية من نظام أتمتة عيادة PhysioFlow عبر الواتساب 🌿✨</textarea>
+                    <textarea name="message" rows="3" class="form-control form-control-modern" required>مرحباً بك! هذه رسالة تجريبية من نظام أتمتة عيادة PhysioFlow عبر الواتساب السحابي 🌿✨</textarea>
                 </div>
 
-                <button type="submit" class="btn btn-modern btn-modern-primary w-100" @(status.IsReady ? "" : "disabled")>
-                    <i class="bi bi-send-fill me-1"></i> إرسال الرسالة الآن
-                </button>
-                @if (!status.IsReady)
-                {
-                    <small class="text-danger d-block mt-2 text-center">
-                        <i class="bi bi-exclamation-triangle me-1"></i> يجب ربط الهاتف أولاً لتفعيل زر الإرسال.
-                    </small>
-                }
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-modern btn-modern-success flex-grow-1">
+                        <i class="bi bi-send-check me-1"></i> إرسال آلي عبر السحابة
+                    </button>
+                    <a href="https://wa.me/962786363593?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20%D8%A8%D9%83%20%D9%85%D9%86%20%D8%B9%D9%8A%D8%A7%D8%AF%D8%A9%20%D9%81%D9%8A%D8%B2%D9%8A%D9%88%20%D9%81%D9%84%D9%88" target="_blank" class="btn btn-modern btn-modern-soft" title="فتح محادثة واتساب ويب مباشرة">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> فتح WhatsApp Web
+                    </a>
+                </div>
             </form>
         </div>
 
-        <!-- Automation Features Overview -->
+        <!-- Automation Features Info -->
         <div class="card-modern p-4">
-            <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
-                <i class="bi bi-robot me-1 text-teal"></i> الرسائل الآلية المدمجة في النظام
-            </h5>
-            <div class="d-flex flex-column gap-3">
-                <div class="d-flex align-items-start gap-3 p-2 bg-light rounded-3">
-                    <span class="badge bg-success-subtle text-success p-2 rounded-circle fs-6">
-                        <i class="bi bi-calendar-check"></i>
-                    </span>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong class="text-dark small">تأكيد حجز الموعد الفوري</strong>
-                            <span class="badge bg-success">مفعل آلياً</span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-1">
-                            عند قيام موظف الاستقبال أو الطبيب بحجز موعد لأي مريض، يتم إرسال رسالة واتساب فورية للمريض تتضمن التاريخ، الوقت، اسم الطبيب المعالج، وتفاصيل الجلسة.
-                        </p>
+            <h6 class="fw-bold mb-3 text-dark">
+                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> ميزات الأتمتة المفعّلة في النظام
+            </h6>
+            <div class="list-group list-group-flush small">
+                <div class="list-group-item d-flex align-items-center justify-content-between px-0">
+                    <div>
+                        <strong>تأكيد الحجز الفوري:</strong>
+                        <div class="text-muted">إرسال تفاصيل الموعد واسم الأخصائي ورقم الجلسة تلقائياً للمريض فور حجز الجلسة.</div>
                     </div>
+                    <span class="badge bg-success-subtle text-success">تلقائي 100%</span>
                 </div>
-
-                <div class="d-flex align-items-start gap-3 p-2 bg-light rounded-3">
-                    <span class="badge bg-primary-subtle text-primary p-2 rounded-circle fs-6">
-                        <i class="bi bi-bell-fill"></i>
-                    </span>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong class="text-dark small">تذكير المريض بالموعد بنقرة واحدة</strong>
-                            <span class="badge bg-primary">متاح في جدول المواعيد</span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-1">
-                            زر مخصص بجانب كل موعد في جدول المواعيد لإرسال رسالة تذكيرية ودية للمريض لحثه على الحضور قبل موعده.
-                        </p>
+                <div class="list-group-item d-flex align-items-center justify-content-between px-0">
+                    <div>
+                        <strong>إشعار الإلغاء:</strong>
+                        <div class="text-muted">إرسال إشعار اعتذار وإلغاء للمريض مع سبب الإلغاء عند إلغاء الجلسة من الجدول.</div>
                     </div>
+                    <span class="badge bg-success-subtle text-success">تلقائي 100%</span>
                 </div>
-
-                <div class="d-flex align-items-start gap-3 p-2 bg-light rounded-3">
-                    <span class="badge bg-danger-subtle text-danger p-2 rounded-circle fs-6">
-                        <i class="bi bi-x-circle-fill"></i>
-                    </span>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong class="text-dark small">إشعار إلغاء الموعد</strong>
-                            <span class="badge bg-success">مفعل آلياً</span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-1">
-                            في حال تم إلغاء موعد المريض مع كتابة سبب الإلغاء، يتم إرسال اعتذار وإشعار فوري له عبر الواتساب مع رقم العيادة لإعادة الجدولة.
-                        </p>
+                <div class="list-group-item d-flex align-items-center justify-content-between px-0">
+                    <div>
+                        <strong>زر التذكير بنقرة واحدة:</strong>
+                        <div class="text-muted">زر أخضر متاح في جدول المواعيد لإرسال تذكير فوري لأي مريض بنقرة زر.</div>
                     </div>
+                    <span class="badge bg-info-subtle text-info">يدوي وسريع</span>
                 </div>
             </div>
         </div>
@@ -269,32 +240,20 @@
 
 @section Scripts {
     <script>
-        // Auto-refresh status every 6 seconds if not ready
-        @if (!status.IsReady)
+        // Auto-refresh status if QR code is waiting
+        @if (status.Status == "qr_ready")
         {
             <text>
             setInterval(function() {
                 fetch('/WhatsApp/LiveStatus')
-                    .then(response => response.json())
+                    .then(res => res.json())
                     .then(data => {
                         if (data.isReady) {
                             window.location.reload();
-                        } else if (data.status === 'qr_ready') {
-                            var badge = document.getElementById('badgeSessionStatus');
-                            if (badge) {
-                                badge.className = 'badge bg-warning text-dark px-2 py-1';
-                                badge.textContent = 'بانتظار ربط الهاتف 🟡';
-                            }
-                            if (data.qrCode) {
-                                var qrContainer = document.getElementById('qrContainer');
-                                if (qrContainer) {
-                                    qrContainer.innerHTML = '<img src="' + data.qrCode + '" alt="WhatsApp QR Code" class="img-fluid rounded-3 shadow-sm border bg-white p-2" style="max-width: 200px;" id="qrImage" />';
-                                }
-                            }
                         }
                     })
-                    .catch(err => console.log('Status polling error:', err));
-            }, 6000);
+                    .catch(err => console.log('Polling status...', err));
+            }, 5000);
             </text>
         }
     </script>

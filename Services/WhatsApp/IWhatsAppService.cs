@@ -13,5 +13,9 @@ namespace PhysioClinic.Services.WhatsApp
         Task<bool> SendAppointmentReminderAsync(Appointment appointment);
         Task<bool> SendAppointmentCancelledAsync(Appointment appointment, string? reason = null);
         string NormalizePhoneToChatId(string phone);
+        string NormalizePhoneDigits(string phone);
+        string GetDirectWhatsAppUrl(string phone, string message);
+        string GetAppointmentConfirmationWhatsAppUrl(Appointment appointment);
+        string GetAppointmentReminderWhatsAppUrl(Appointment appointment);
     }
 }

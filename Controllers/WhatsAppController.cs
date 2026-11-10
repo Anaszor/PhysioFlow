@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using PhysioClinic.Models;
 using PhysioClinic.Services.WhatsApp;
+using System.Text;
+using System.Text.Json;
 
 namespace PhysioClinic.Controllers
 {
@@ -51,11 +53,75 @@ namespace PhysioClinic.Controllers
             var success = await _whatsAppService.StartSessionAsync();
             if (success)
             {
-                TempData["SuccessMessage"] = "تم بدء تشغيل جلسة الواتساب بنجاح. يمكنك الآن ربط رقمك.";
+                TempData["SuccessMessage"] = "تم تفعيل جلسة الواتساب السحابية بنجاح.";
             }
             else
             {
-                TempData["ErrorMessage"] = "فشل بدء جلسة الواتساب. يرجى التأكد من تشغيل البوابة على المنفذ 2785.";
+                TempData["ErrorMessage"] = "فشل بدء جلسة الواتساب. يرجى التحقق من بيانات الاتصال.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: /WhatsApp/SaveSettings
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = ClinicRoles.Admin)]
+        public async Task<IActionResult> SaveSettings(
+            string provider,
+            string instanceId,
+            string apiToken,
+            string senderNumber,
+            string clinicName,
+            bool autoSendOnBooking = true,
+            bool autoSendOnCancel = true)
+        {
+            try
+            {
+                var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+                if (System.IO.File.Exists(appSettingsPath))
+                {
+                    var json = await System.IO.File.ReadAllTextAsync(appSettingsPath);
+                    var root = JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+
+                    var waDict = new Dictionary<string, object>
+                    {
+                        ["Enabled"] = true,
+                        ["Provider"] = provider ?? "GreenApi",
+                        ["InstanceId"] = (instanceId ?? "").Trim(),
+                        ["ApiToken"] = (apiToken ?? "").Trim(),
+                        ["SenderNumber"] = (senderNumber ?? "").Trim(),
+                        ["ClinicName"] = string.IsNullOrWhiteSpace(clinicName) ? "عيادة فيزيو فلو للعلاج الطبيعي والتأهيل" : clinicName.Trim(),
+                        ["AutoSendOnBooking"] = autoSendOnBooking,
+                        ["AutoSendOnCancel"] = autoSendOnCancel
+                    };
+
+                    root["WhatsApp"] = waDict;
+
+                    var updatedJson = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+                    await System.IO.File.WriteAllTextAsync(appSettingsPath, updatedJson, Encoding.UTF8);
+
+                    // Update memory settings
+                    _settings.Enabled = true;
+                    _settings.Provider = provider ?? "GreenApi";
+                    _settings.InstanceId = (instanceId ?? "").Trim();
+                    _settings.ApiToken = (apiToken ?? "").Trim();
+                    _settings.SenderNumber = (senderNumber ?? "").Trim();
+                    _settings.ClinicName = string.IsNullOrWhiteSpace(clinicName) ? _settings.ClinicName : clinicName.Trim();
+                    _settings.AutoSendOnBooking = autoSendOnBooking;
+                    _settings.AutoSendOnCancel = autoSendOnCancel;
+
+                    TempData["SuccessMessage"] = "تم حفظ إعدادات الواتساب السحابية بنجاح!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "تعذر العثور على ملف appsettings.json لتحديثه.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save WhatsApp settings to appsettings.json");
+                TempData["ErrorMessage"] = $"فشل حفظ الإعدادات: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Index));
@@ -77,7 +143,7 @@ namespace PhysioClinic.Controllers
             }
             else
             {
-                TempData["ErrorMessage"] = result.ErrorMessage ?? "تعذر توليد كود الربط. تأكد من تشغيل الجلسة وبوابة الواتساب.";
+                TempData["ErrorMessage"] = result.ErrorMessage ?? "تعذر توليد كود الربط. يرجى مسح رمز الـ QR بدلاً من ذلك.";
             }
 
             return RedirectToAction(nameof(Index));
