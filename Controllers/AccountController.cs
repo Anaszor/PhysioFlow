@@ -127,6 +127,7 @@ namespace PhysioClinic.Controllers
                     Email = user.Email ?? "",
                     Role = roles.FirstOrDefault() ?? "بدون دور",
                     RoleTitle = user.RoleTitle,
+                    TherapistId = user.TherapistId,
                     LinkedTherapist = user.Therapist?.FullName,
                     CreatedAt = user.CreatedAt
                 });
@@ -193,6 +194,112 @@ namespace PhysioClinic.Controllers
             await _userManager.AddToRoleAsync(user, model.Role);
 
             TempData["SuccessMessage"] = $"تم إضافة المستخدم ({model.FullName}) وتعيين دور ({ClinicRoles.GetArabicTitle(model.Role)}) بنجاح.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // GET: Account/EditUser/5
+        [HttpGet]
+        [Authorize(Roles = ClinicRoles.Admin)]
+        public async Task<IActionResult> EditUser(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return NotFound();
+
+            var user = await _userManager.Users
+                .Include(u => u.Therapist)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null) return NotFound();
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var currentRole = roles.FirstOrDefault() ?? ClinicRoles.Receptionist;
+
+            var model = new EditStaffViewModel
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email ?? "",
+                Role = currentRole,
+                RoleTitle = user.RoleTitle,
+                TherapistId = user.TherapistId
+            };
+
+            ViewBag.Therapists = await _context.Therapists.OrderBy(t => t.FullName).ToListAsync();
+            return View(model);
+        }
+
+        // POST: Account/EditUser/5
+        [HttpPost]
+        [Authorize(Roles = ClinicRoles.Admin)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditUser(EditStaffViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Therapists = await _context.Therapists.OrderBy(t => t.FullName).ToListAsync();
+                return View(model);
+            }
+
+            var user = await _userManager.FindByIdAsync(model.Id);
+            if (user == null) return NotFound();
+
+            // Check if email changed and is taken
+            if (user.Email != model.Email)
+            {
+                var existing = await _userManager.FindByEmailAsync(model.Email);
+                if (existing != null && existing.Id != model.Id)
+                {
+                    ModelState.AddModelError("Email", "هذا البريد الإلكتروني مسجل مسبقاً لمستخدم آخر.");
+                    ViewBag.Therapists = await _context.Therapists.OrderBy(t => t.FullName).ToListAsync();
+                    return View(model);
+                }
+                user.Email = model.Email;
+                user.UserName = model.Email;
+            }
+
+            user.FullName = model.FullName;
+            user.RoleTitle = model.RoleTitle ?? ClinicRoles.GetArabicTitle(model.Role);
+            user.TherapistId = model.Role == ClinicRoles.Doctor ? model.TherapistId : null;
+
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                foreach (var err in updateResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, err.Description);
+                }
+                ViewBag.Therapists = await _context.Therapists.OrderBy(t => t.FullName).ToListAsync();
+                return View(model);
+            }
+
+            // Update role if changed
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            if (!currentRoles.Contains(model.Role))
+            {
+                await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                if (!await _roleManager.RoleExistsAsync(model.Role))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole(model.Role));
+                }
+                await _userManager.AddToRoleAsync(user, model.Role);
+            }
+
+            // Password reset if provided
+            if (!string.IsNullOrWhiteSpace(model.NewPassword))
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var passResult = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+                if (!passResult.Succeeded)
+                {
+                    foreach (var err in passResult.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, err.Description);
+                    }
+                    ViewBag.Therapists = await _context.Therapists.OrderBy(t => t.FullName).ToListAsync();
+                    return View(model);
+                }
+            }
+
+            TempData["SuccessMessage"] = $"تم تحديث بيانات المستخدم ({user.FullName}) بنجاح.";
             return RedirectToAction(nameof(Users));
         }
 

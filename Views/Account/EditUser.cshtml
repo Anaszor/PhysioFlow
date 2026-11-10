@@ -1,0 +1,126 @@
+@model PhysioClinic.ViewModels.EditStaffViewModel
+@{
+    ViewData["Title"] = "تعديل بيانات المستخدم والصلاحيات";
+    var therapists = ViewBag.Therapists as List<PhysioClinic.Models.Therapist> ?? new();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-1 text-dark">تعديل بيانات المستخدم والصلاحيات 👤</h3>
+                <p class="text-muted mb-0">تحديث بيانات حساب الموظف، الصلاحيات، والربط مع ملف الأخصائي الطبي.</p>
+            </div>
+            <div class="d-flex gap-2">
+                @if (Model.TherapistId.HasValue)
+                {
+                    <a asp-controller="Therapists" asp-action="Edit" asp-route-id="@Model.TherapistId" class="btn btn-modern btn-modern-soft">
+                        <i class="bi bi-person-badge me-1"></i> تعديل الملف الطبي للأخصائي
+                    </a>
+                }
+                <a asp-action="Users" class="btn btn-modern btn-modern-outline">
+                    <i class="bi bi-arrow-right me-1"></i> العودة للمستخدمين
+                </a>
+            </div>
+        </div>
+
+        <form asp-action="EditUser" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
+
+            <div class="card-modern mb-4">
+                <div class="card-modern-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="zone-avatar" style="width: 36px; height: 36px; background-color: var(--primary-light); color: var(--primary-dark);">
+                            <i class="bi bi-person-gear"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0 text-dark">تعديل بيانات الحساب (@Model.FullName)</h6>
+                    </div>
+                </div>
+
+                <div class="card-modern-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label-modern fw-bold">الاسم الكامل <span class="text-danger">*</span></label>
+                            <input asp-for="FullName" class="form-control form-control-modern" placeholder="الاسم الكامل للمستخدم" required />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label-modern fw-bold">البريد الإلكتروني المهني <span class="text-danger">*</span></label>
+                            <input asp-for="Email" class="form-control form-control-modern font-monospace" placeholder="user@physioflow.com" required />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Role" class="form-label-modern fw-bold">الدور والصلاحيات (Role) <span class="text-danger">*</span></label>
+                            <select asp-for="Role" class="form-select form-select-modern" id="roleSelector" onchange="toggleTherapistLink()">
+                                <option value="Admin">مدير النظام (Admin) - كامل الصلاحيات</option>
+                                <option value="Doctor">طبيب / أخصائي معالج (Doctor) - فحص، خطط، إنجاز</option>
+                                <option value="Receptionist">موظف استقبال (Receptionist) - حجز واستبيان فقط</option>
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="RoleTitle" class="form-label-modern fw-bold">المسمى الوظيفي التفصيلي</label>
+                            <input asp-for="RoleTitle" class="form-control form-control-modern" placeholder="مثال: استشاري أول علاج طبيعي وتأهيل رياضي" />
+                        </div>
+
+                        <div class="col-md-12" id="therapistGroup" style="@(Model.Role == "Doctor" ? "" : "display: none;")">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <label asp-for="TherapistId" class="form-label-modern fw-bold">
+                                    <i class="bi bi-link-45deg me-1 text-primary"></i> الربط بملف الأخصائي الطبي (Therapist Record)
+                                </label>
+                                <select asp-for="TherapistId" class="form-select form-select-modern">
+                                    <option value="">-- غير مرتبط بملف أخصائي محدد --</option>
+                                    @foreach (var th in therapists)
+                                    {
+                                        <option value="@th.Id" selected="@(Model.TherapistId == th.Id)">
+                                            @th.Title @th.FullName - @th.Specialization
+                                        </option>
+                                    }
+                                </select>
+                                <small class="text-muted d-block mt-1">
+                                    يربط هذا الحساب بجدول جلسات الطبيب وسجلاته السريرية ومواعيده داخل العيادة.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <hr class="my-2" />
+                            <label asp-for="NewPassword" class="form-label-modern fw-bold">
+                                <i class="bi bi-key me-1 text-warning"></i> تعيين كلمة مرور جديدة (اختياري)
+                            </label>
+                            <input asp-for="NewPassword" type="password" class="form-control form-control-modern" placeholder="اترك هذا الحقل فارغاً إذا كنت لا ترغب بتغيير كلمة المرور" />
+                            <small class="text-muted">إذا كنت ترغب بإعادة تعيين كلمة المرور للمستخدم، أدخل كلمة المرور الجديدة هنا (6 أحرف على الأقل).</small>
+                            <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <a asp-action="Users" class="btn btn-modern btn-modern-outline">إلغاء</a>
+                <button type="submit" class="btn btn-modern btn-modern-primary px-4">
+                    <i class="bi bi-check2-circle me-1"></i> حفظ تعديلات المستخدم
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleTherapistLink() {
+            const role = document.getElementById('roleSelector').value;
+            const group = document.getElementById('therapistGroup');
+            if (role === 'Doctor') {
+                group.style.display = 'block';
+            } else {
+                group.style.display = 'none';
+            }
+        }
+    </script>
+}
