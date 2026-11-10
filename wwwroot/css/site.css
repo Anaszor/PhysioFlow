@@ -873,3 +873,46 @@ ul.nav li, ul.nav-pills li, .segmented-tabs li {
     }
 }
 
+/* Receptionist Notification System Animations & Enhancements */
+@keyframes pulse-ring {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+.animate-pulse {
+    animation: pulse-ring 2s infinite;
+}
+
+.notif-dropdown-menu {
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.notif-dropdown-menu .nav-pills .nav-link {
+    color: var(--slate-600);
+    font-weight: 600;
+}
+
+.notif-dropdown-menu .nav-pills .nav-link.active {
+    background-color: var(--primary);
+    color: #ffffff;
+}
+
+.timeslot-pill.selected {
+    border-color: var(--primary) !important;
+    background: linear-gradient(135deg, #0d9488, #0f766e) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35) !important;
+}
+
+

@@ -1,16 +1,18 @@
 @model PhysioClinic.Models.ViewModels.BookingViewModel
 @{
-    ViewData["Title"] = "حجز موعد واختيار الفترة الزمنية";
+    ViewData["Title"] = "حجز وإدارة الفترات الزمنية (Timeslots)";
 }
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div>
         <h3 class="fw-bold mb-1 text-dark">حجز جلسة واختيار الفترة الزمنية (Timeslots) 📅</h3>
-        <p class="text-muted mb-0">تحديد المعالج والتاريخ واختيار الفترة الزمنية المتاحة دون أي تضارب بالمواعيد.</p>
+        <p class="text-muted mb-0">نظام ذكي وسهل لحجز فترات الجلسات مع منع التضارب وتحديث التوفر بشكل مباشر ولحظي.</p>
     </div>
-    <a asp-action="Index" class="btn btn-modern btn-modern-outline">
-        <i class="bi bi-arrow-right me-1"></i> العودة لجدول المواعيد
-    </a>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-modern btn-modern-outline">
+            <i class="bi bi-arrow-right me-1"></i> العودة لجدول المواعيد
+        </a>
+    </div>
 </div>
 
 <form asp-action="Book" method="post" id="bookingForm">
@@ -18,104 +20,160 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
 
     <input type="hidden" asp-for="SelectedTime" id="selectedTimeInput" />
+    <input type="hidden" asp-for="DurationMinutes" id="durationMinutesInput" value="@Model.DurationMinutes" />
 
     <div class="row g-4">
         <!-- Main Configuration Column -->
         <div class="col-lg-8">
             <!-- 1. Patient & Plan -->
             <div class="card-modern mb-4">
-                <div class="card-modern-header">
+                <div class="card-modern-header d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2">
                         <div class="zone-avatar" style="width: 36px; height: 36px; background-color: var(--primary-light); color: var(--primary-dark);">
                             <i class="bi bi-person"></i>
                         </div>
-                        <h6 class="fw-bold mb-0 text-dark">1. تحديد المريض والبرنامج</h6>
+                        <h6 class="fw-bold mb-0 text-dark">1. تحديد المريض والبرنامج العلاجي</h6>
                     </div>
+                    <a asp-controller="Intake" asp-action="New" target="_blank" class="btn btn-sm btn-link text-decoration-none">
+                        <i class="bi bi-person-plus me-1"></i> مريض جديد
+                    </a>
                 </div>
 
                 <div class="card-modern-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label-modern">المريض المستفيد <span class="text-danger">*</span></label>
-                            <select asp-for="ClientId" id="clientSelect" class="form-select form-select-modern" onchange="updateSummary()">
+                            <label class="form-label-modern fw-bold">المريض المستفيد <span class="text-danger">*</span></label>
+                            <input type="text" id="clientSearchInput" class="form-control form-control-sm mb-2" placeholder="🔍 فلترة سريعة بالاسم أو رقم الهاتف..." oninput="filterClientOptions(this.value)" autocomplete="off" />
+                            <select asp-for="ClientId" id="clientSelect" class="form-select form-select-modern" onchange="updateSummary()" size="4" required style="font-size: 0.88rem;">
                                 <option value="">-- اختر ملف المريض --</option>
                                 @foreach (var c in Model.Clients)
                                 {
-                                    <option value="@c.Id" data-name="@c.FullName" data-phone="@c.Phone">@c.FullName (@c.Phone)</option>
+                                    <option value="@c.Id" data-name="@c.FullName" data-phone="@c.Phone" selected="@(Model.ClientId == c.Id)">@c.FullName (@c.Phone)</option>
                                 }
                             </select>
                             <span asp-validation-for="ClientId" class="text-danger small"></span>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label-modern">الخطة العلاجية المرتبطة</label>
-                            <select asp-for="TreatmentPlanId" id="planSelect" class="form-select form-select-modern" onchange="updateSummary()">
+                            <label class="form-label-modern fw-bold">الخطة / البرنامج العلاجي</label>
+                            <select asp-for="TreatmentPlanId" id="planSelect" class="form-select form-select-modern" onchange="updateSummary()" style="height: 48px;">
                                 <option value="">-- جلسة استشارة عامة / تقييم أولي --</option>
                                 @foreach (var tp in Model.ActivePlans)
                                 {
-                                    <option value="@tp.Id" data-title="@tp.Title">@tp.Title - @tp.Client?.FullName (الجلسة @(tp.CompletedSessions + 1) من @tp.TotalSessions)</option>
+                                    <option value="@tp.Id" data-title="@tp.Title" selected="@(Model.TreatmentPlanId == tp.Id)">@tp.Title - @tp.Client?.FullName (الجلسة @(tp.CompletedSessions + 1) من @tp.TotalSessions)</option>
                                 }
                             </select>
+
+                            <div class="mt-3">
+                                <label class="form-label-modern fw-bold">ملاحظات الموعد (اختياري)</label>
+                                <input type="text" asp-for="Notes" class="form-control form-control-modern" placeholder="أية توجيهات أو ملاحظات قبل الجلسة..." />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. Therapist & Date -->
+            <!-- 2. Therapist & Date & Duration Selection -->
             <div class="card-modern mb-4">
                 <div class="card-modern-header">
                     <div class="d-flex align-items-center gap-2">
                         <div class="zone-avatar" style="width: 36px; height: 36px; background-color: #ede9fe; color: #4338ca;">
                             <i class="bi bi-person-badge"></i>
                         </div>
-                        <h6 class="fw-bold mb-0 text-dark">2. الأخصائي المعالج وتاريخ الجلسة</h6>
+                        <h6 class="fw-bold mb-0 text-dark">2. الأخصائي المعالج وتاريخ الجلسة والمدة</h6>
                     </div>
                 </div>
 
                 <div class="card-modern-body">
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label-modern">الأخصائي المشرف <span class="text-danger">*</span></label>
-                            <select asp-for="TherapistId" id="therapistSelect" class="form-select form-select-modern" onchange="refreshSlots()">
+                            <label class="form-label-modern fw-bold">الأخصائي المشرف <span class="text-danger">*</span></label>
+                            <select asp-for="TherapistId" id="therapistSelect" class="form-select form-select-modern" onchange="loadSlotsAjax()">
                                 @foreach (var th in Model.Therapists)
                                 {
-                                    <option value="@th.Id" data-name="@th.FullName">@th.FullName (@th.Specialization)</option>
+                                    <option value="@th.Id" data-name="@th.FullName" selected="@(Model.TherapistId == th.Id)">
+                                        @th.Title @th.FullName (@th.Specialization)
+                                    </option>
                                 }
                             </select>
                             <span asp-validation-for="TherapistId" class="text-danger small"></span>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label-modern">تاريخ الموعد <span class="text-danger">*</span></label>
-                            <input asp-for="SelectedDate" id="dateInput" type="date" class="form-control form-control-modern fw-bold" onchange="refreshSlots()" />
+                            <label class="form-label-modern fw-bold">تاريخ الجلسة <span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input asp-for="SelectedDate" id="dateInput" type="date" class="form-control form-control-modern fw-bold" value="@Model.SelectedDate.ToString("yyyy-MM-dd")" onchange="loadSlotsAjax()" />
+                            </div>
+                            <div class="d-flex gap-1 mt-2">
+                                <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill small" onclick="setQuickDate(0)">اليوم</button>
+                                <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill small" onclick="setQuickDate(1)">غداً</button>
+                                <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill small" onclick="setQuickDate(2)">بعد غد</button>
+                            </div>
                             <span asp-validation-for="SelectedDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Duration & Mode Selector -->
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div>
+                                <span class="fw-bold text-dark small d-block mb-1">مدة الجلسة الزمنية:</span>
+                                <div class="btn-group btn-group-sm" role="group" id="durationGroup">
+                                    <button type="button" class="btn btn-outline-primary @(Model.DurationMinutes == 30 ? "active" : "")" onclick="setDuration(30)">30 دقيقة</button>
+                                    <button type="button" class="btn btn-outline-primary @(Model.DurationMinutes == 45 ? "active" : "")" onclick="setDuration(45)">45 دقيقة (افتراضي)</button>
+                                    <button type="button" class="btn btn-outline-primary @(Model.DurationMinutes == 60 ? "active" : "")" onclick="setDuration(60)">60 دقيقة</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="fw-bold text-dark small d-block mb-1">نمط الاختيار:</span>
+                                <div class="form-check form-switch m-0 pt-1">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="customTimeToggle" onchange="toggleCustomTimeMode(this.checked)">
+                                    <label class="form-check-label small fw-semibold text-secondary" for="customTimeToggle">تحديد وقت مخصص يدوياً</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Time Picker Row (Hidden by default) -->
+                        <div id="customTimeRow" class="row g-2 mt-3 pt-3 border-top d-none">
+                            <div class="col-sm-6">
+                                <label class="form-label-modern small fw-bold">وقت البدء المخصص</label>
+                                <input type="time" asp-for="CustomStartTime" id="customStartTimeInput" class="form-control form-control-modern fw-bold" onchange="onCustomTimeChanged()" />
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label-modern small fw-bold">وقت الانتهاء المخصص</label>
+                                <input type="time" asp-for="CustomEndTime" id="customEndTimeInput" class="form-control form-control-modern fw-bold" onchange="onCustomTimeChanged()" />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- 3. Timeslots Grid -->
-            <div class="card-modern mb-4">
-                <div class="card-modern-header">
+            <div class="card-modern mb-4" id="slotsCardContainer">
+                <div class="card-modern-header d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2">
                         <div class="zone-avatar" style="width: 36px; height: 36px; background-color: #ecfdf5; color: #059669;">
                             <i class="bi bi-clock"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold mb-0 text-dark">3. اختيار الفترة الزمنية (مدة الجلسة 45 دقيقة)</h6>
-                            <small class="text-muted">الفترات الخضراء متاحة، والرمادية محجوزة</small>
+                            <h6 class="fw-bold mb-0 text-dark">3. اختيار الفترة الزمنية المتاحة</h6>
+                            <small class="text-muted" id="slotsHeaderSubtitle">الفترات المتاحة خضراء، والمحجوزة رمادية</small>
                         </div>
+                    </div>
+                    <div id="slotsLoadingSpinner" class="spinner-border spinner-border-sm text-teal d-none" role="status" style="color: var(--primary);">
+                        <span class="visually-hidden">جاري التحميل...</span>
                     </div>
                 </div>
 
-                <div class="card-modern-body">
+                <div class="card-modern-body" id="slotsBodyContainer">
                     <!-- Morning -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <span class="badge bg-warning-subtle text-warning border px-2 py-1"><i class="bi bi-sunrise-fill"></i></span>
                             <h6 class="fw-bold mb-0 text-secondary">الفترة الصباحية (09:00 - 12:00)</h6>
                         </div>
-                        <div class="row g-2">
+                        <div class="row g-2" id="morningSlotsRow">
                             @foreach (var slot in Model.AvailableSlots.Where(s => s.Period == "صباحي"))
                             {
                                 <div class="col-6 col-sm-4 col-md-3">
@@ -144,7 +202,7 @@
                             <span class="badge bg-primary-subtle text-primary border px-2 py-1"><i class="bi bi-sun-fill"></i></span>
                             <h6 class="fw-bold mb-0 text-secondary">فترة الظهيرة والعصر (13:00 - 16:00)</h6>
                         </div>
-                        <div class="row g-2">
+                        <div class="row g-2" id="afternoonSlotsRow">
                             @foreach (var slot in Model.AvailableSlots.Where(s => s.Period == "ظهراً" || s.Period == "عصراً"))
                             {
                                 <div class="col-6 col-sm-4 col-md-3">
@@ -171,9 +229,9 @@
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <span class="badge bg-indigo-subtle text-indigo border px-2 py-1" style="background-color: #ede9fe; color: #4338ca;"><i class="bi bi-moon-stars-fill"></i></span>
-                            <h6 class="fw-bold mb-0 text-secondary">الفترة المسائية (16:30 - 19:30)</h6>
+                            <h6 class="fw-bold mb-0 text-secondary">الفترة المسائية (16:30 - 20:00)</h6>
                         </div>
-                        <div class="row g-2">
+                        <div class="row g-2" id="eveningSlotsRow">
                             @foreach (var slot in Model.AvailableSlots.Where(s => s.Period == "مسائي"))
                             {
                                 <div class="col-6 col-sm-4 col-md-3">
@@ -208,7 +266,7 @@
 
                 <div class="card-modern-body">
                     <div class="mb-3 pb-3 border-bottom">
-                        <span class="text-muted small d-block mb-1">المريض المراجع:</span>
+                        <span class="text-muted small d-block mb-1">المريض المستفيد:</span>
                         <div class="fw-bold text-dark fs-6" id="summaryClient">-- لم يتم التحديد --</div>
                     </div>
 
@@ -221,11 +279,11 @@
                         <span class="text-muted small d-block mb-1">تاريخ وموعد الجلسة:</span>
                         <div class="fw-bold text-dark" id="summaryDate">@Model.SelectedDate.ToString("yyyy-MM-dd")</div>
                         <div class="fw-bold fs-5 mt-1 text-primary" id="summaryTime">-- اختر الفترة الزمنية --</div>
-                        <span class="badge bg-light text-muted border mt-1">جلسة تأهيل 45 دقيقة</span>
+                        <span class="badge bg-light text-muted border mt-1" id="summaryDurationBadge">جلسة تأهيل @Model.DurationMinutes دقيقة</span>
                     </div>
 
                     <div class="mb-4">
-                        <span class="text-muted small d-block mb-1">البرنامج:</span>
+                        <span class="text-muted small d-block mb-1">البرنامج العلاجي:</span>
                         <div class="small text-secondary" id="summaryPlan">جلسة استشارة / تقييم أولي</div>
                     </div>
 
@@ -240,13 +298,160 @@
 
 @section Scripts {
     <script>
+        let currentDuration = @Model.DurationMinutes;
+        let isCustomTime = false;
+
         function pickSlot(time, element) {
             document.querySelectorAll('.timeslot-pill').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
+            if (element) element.classList.add('selected');
 
             document.getElementById('selectedTimeInput').value = time;
             document.getElementById('summaryTime').innerText = "الساعة: " + time;
-            document.getElementById('submitBookingBtn').disabled = false;
+            validateAndEnableSubmit();
+        }
+
+        function setDuration(dur) {
+            currentDuration = dur;
+            document.getElementById('durationMinutesInput').value = dur;
+            document.querySelectorAll('#durationGroup button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('summaryDurationBadge').innerText = `جلسة تأهيل ${dur} دقيقة`;
+            document.getElementById('slotsHeaderSubtitle').innerText = `مدة الفترة: ${dur} دقيقة. الفترات الخضراء متاحة.`;
+            loadSlotsAjax();
+        }
+
+        function setQuickDate(daysOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const str = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('dateInput').value = str;
+            loadSlotsAjax();
+        }
+
+        function toggleCustomTimeMode(enabled) {
+            isCustomTime = enabled;
+            const customRow = document.getElementById('customTimeRow');
+            const slotsCard = document.getElementById('slotsCardContainer');
+
+            if (enabled) {
+                customRow.classList.remove('d-none');
+                slotsCard.classList.add('opacity-50');
+                slotsCard.style.pointerEvents = 'none';
+                onCustomTimeChanged();
+            } else {
+                customRow.classList.add('d-none');
+                slotsCard.classList.remove('opacity-50');
+                slotsCard.style.pointerEvents = 'auto';
+                document.getElementById('customStartTimeInput').value = '';
+                document.getElementById('customEndTimeInput').value = '';
+                updateSummary();
+            }
+        }
+
+        function onCustomTimeChanged() {
+            const startVal = document.getElementById('customStartTimeInput').value;
+            const endVal = document.getElementById('customEndTimeInput').value;
+
+            if (startVal) {
+                document.getElementById('selectedTimeInput').value = startVal;
+                document.getElementById('summaryTime').innerText = `وقت مخصص: ${startVal}` + (endVal ? ` - ${endVal}` : '');
+                validateAndEnableSubmit();
+            }
+        }
+
+        function filterClientOptions(term) {
+            const termLower = (term || '').toLowerCase().trim();
+            const select = document.getElementById('clientSelect');
+            if (!select) return;
+
+            Array.from(select.options).forEach(opt => {
+                if (!opt.value) return;
+                const name = (opt.dataset.name || opt.text || '').toLowerCase();
+                const phone = (opt.dataset.phone || '').toLowerCase();
+                if (!termLower || name.includes(termLower) || phone.includes(termLower)) {
+                    opt.style.display = '';
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+        }
+
+        async function loadSlotsAjax() {
+            const therapistSelect = document.getElementById('therapistSelect');
+            const dateInput = document.getElementById('dateInput');
+            const spinner = document.getElementById('slotsLoadingSpinner');
+            if (!therapistSelect || !dateInput) return;
+
+            const therapistId = therapistSelect.value;
+            const date = dateInput.value;
+            updateSummary();
+
+            if (spinner) spinner.classList.remove('d-none');
+
+            try {
+                const response = await fetch(`/Appointments/GetTherapistSlots?therapistId=${therapistId}&date=${date}&duration=${currentDuration}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.slots) {
+                        renderSlots(data.slots);
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching slots:', err);
+            } finally {
+                if (spinner) spinner.classList.add('d-none');
+            }
+        }
+
+        function renderSlots(slots) {
+            const morningRow = document.getElementById('morningSlotsRow');
+            const afternoonRow = document.getElementById('afternoonSlotsRow');
+            const eveningRow = document.getElementById('eveningSlotsRow');
+
+            if (!morningRow || !afternoonRow || !eveningRow) return;
+
+            morningRow.innerHTML = '';
+            afternoonRow.innerHTML = '';
+            eveningRow.innerHTML = '';
+
+            const selectedTime = document.getElementById('selectedTimeInput').value;
+
+            slots.forEach(slot => {
+                const isSelected = slot.time === selectedTime && slot.isAvailable;
+                const html = `
+                    <div class="col-6 col-sm-4 col-md-3">
+                        <div class="timeslot-pill ${slot.isAvailable ? 'available' : 'booked'} ${isSelected ? 'selected' : ''}" 
+                             onclick="${slot.isAvailable ? `pickSlot('${slot.time}', this)` : ''}">
+                            <div class="timeslot-time">${slot.time}</div>
+                            <div class="timeslot-status">
+                                ${slot.isAvailable 
+                                    ? '<span class="text-success"><i class="bi bi-check-circle me-1"></i>متاح</span>' 
+                                    : `<span class="text-muted text-truncate d-block" title="${slot.bookedBy || 'محجوز'}"><i class="bi bi-lock-fill me-1"></i>${slot.bookedBy || 'محجوز'}</span>`}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                if (slot.period === 'صباحي') {
+                    morningRow.insertAdjacentHTML('beforeend', html);
+                } else if (slot.period === 'ظهراً' || slot.period === 'عصراً') {
+                    afternoonRow.insertAdjacentHTML('beforeend', html);
+                } else {
+                    eveningRow.insertAdjacentHTML('beforeend', html);
+                }
+            });
+        }
+
+        function validateAndEnableSubmit() {
+            const clientSelect = document.getElementById('clientSelect');
+            const selectedTime = document.getElementById('selectedTimeInput').value;
+            const btn = document.getElementById('submitBookingBtn');
+            if (btn) {
+                btn.disabled = !(clientSelect && clientSelect.value && selectedTime);
+            }
         }
 
         function updateSummary() {
@@ -263,17 +468,13 @@
             document.getElementById('summaryPlan').innerText = planTitle;
 
             const dateInput = document.getElementById('dateInput');
-            document.getElementById('summaryDate').innerText = dateInput.value;
+            document.getElementById('summaryDate').innerText = dateInput ? dateInput.value : '';
+
+            validateAndEnableSubmit();
         }
 
-        function refreshSlots() {
-            const therapistId = document.getElementById('therapistSelect').value;
-            const date = document.getElementById('dateInput').value;
-            const clientId = document.getElementById('clientSelect').value;
-            window.location.href = `/Appointments/Book?clientId=${clientId}&therapistId=${therapistId}&date=${date}`;
-        }
-
-        // Initialize summary on load
-        document.addEventListener('DOMContentLoaded', updateSummary);
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSummary();
+        });
     </script>
 }

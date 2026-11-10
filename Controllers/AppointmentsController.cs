@@ -27,6 +27,28 @@ namespace PhysioClinic.Controllers
             _whatsAppService = whatsAppService;
         }
 
+        private static List<(string start, string end, string period)> GetStandardTimeslots(int durationMinutes = 45)
+        {
+            var slots = new List<(string start, string end, string period)>();
+            int dur = durationMinutes > 0 ? durationMinutes : 45;
+
+            void AddRange(TimeSpan from, TimeSpan to, string period)
+            {
+                var cur = from;
+                while (cur.Add(TimeSpan.FromMinutes(dur)) <= to)
+                {
+                    var end = cur.Add(TimeSpan.FromMinutes(dur));
+                    slots.Add((cur.ToString(@"hh\:mm"), end.ToString(@"hh\:mm"), period));
+                    cur = end;
+                }
+            }
+
+            AddRange(new TimeSpan(9, 0, 0), new TimeSpan(12, 0, 0), "صباحي");
+            AddRange(new TimeSpan(13, 0, 0), new TimeSpan(16, 0, 0), "ظهراً");
+            AddRange(new TimeSpan(16, 30, 0), new TimeSpan(20, 0, 0), "مسائي");
+            return slots;
+        }
+
         // GET: Appointments
         public async Task<IActionResult> Index(DateTime? date, int? therapistId)
         {
@@ -59,9 +81,44 @@ namespace PhysioClinic.Controllers
                 .OrderBy(a => a.StartTime)
                 .ToListAsync();
 
+            var activeTherapists = await _context.Therapists.Where(t => t.IsActive).ToListAsync();
             ViewBag.SelectedDate = selectedDate;
             ViewBag.TherapistId = therapistId;
-            ViewBag.Therapists = await _context.Therapists.Where(t => t.IsActive).ToListAsync();
+            ViewBag.Therapists = activeTherapists;
+
+            // Generate Timeline Slots for the day (for selected therapist, or first active)
+            var timelineTherapistId = therapistId ?? activeTherapists.FirstOrDefault()?.Id ?? 0;
+            var rawTimeline = GetStandardTimeslots(45);
+            var dayBookings = await _context.Appointments
+                .Include(a => a.Client)
+                .Include(a => a.Therapist)
+                .Include(a => a.TreatmentPlan)
+                .Where(a => a.AppointmentDate == selectedDate && a.Status != "Cancelled" && (timelineTherapistId == 0 || a.TherapistId == timelineTherapistId))
+                .ToListAsync();
+
+            var timelineSlots = rawTimeline.Select(slot =>
+            {
+                var existing = dayBookings.FirstOrDefault(b => b.StartTime == slot.start);
+                return new TimeslotSlot
+                {
+                    Time = slot.start,
+                    EndTime = slot.end,
+                    DisplayTime = $"{slot.start} - {slot.end}",
+                    Period = slot.period,
+                    IsAvailable = existing == null,
+                    BookedByClientName = existing?.Client?.FullName,
+                    ClientId = existing?.ClientId,
+                    ClientPhone = existing?.Client?.Phone,
+                    TherapistName = existing?.Therapist?.FullName,
+                    AppointmentId = existing?.Id,
+                    Status = existing?.Status,
+                    SessionType = existing?.TreatmentPlan != null ? existing.TreatmentPlan.Title : "استشارة وتقييم أولي"
+                };
+            }).ToList();
+
+            ViewBag.TimelineSlots = timelineSlots;
+            ViewBag.ActiveClients = await _context.Clients.OrderBy(c => c.FullName).ToListAsync();
+            ViewBag.ActivePlans = await _context.TreatmentPlans.Where(p => p.Status == "Active").ToListAsync();
 
             return View(appointments);
         }
@@ -69,28 +126,13 @@ namespace PhysioClinic.Controllers
         // GET: Appointments/Book (Receptionist & Admin ONLY)
         [HttpGet]
         [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
-        public async Task<IActionResult> Book(int? clientId, int? therapistId, DateTime? date)
+        public async Task<IActionResult> Book(int? clientId, int? therapistId, DateTime? date, int duration = 45)
         {
             var selectedDate = date ?? DateTime.Today;
             var therapists = await _context.Therapists.Where(t => t.IsActive).ToListAsync();
             var targetTherapistId = therapistId ?? therapists.FirstOrDefault()?.Id ?? 1;
 
-            // Generate Clinic Timeslots (from 09:00 to 19:15, 45-min slots)
-            var rawTimeslots = new List<(string start, string end, string period)>
-            {
-                ("09:00", "09:45", "صباحي"),
-                ("09:45", "10:30", "صباحي"),
-                ("10:30", "11:15", "صباحي"),
-                ("11:15", "12:00", "صباحي"),
-                ("13:00", "13:45", "ظهراً"),
-                ("13:45", "14:30", "ظهراً"),
-                ("14:30", "15:15", "ظهراً"),
-                ("15:15", "16:00", "عصراً"),
-                ("16:30", "17:15", "مسائي"),
-                ("17:15", "18:00", "مسائي"),
-                ("18:00", "18:45", "مسائي"),
-                ("18:45", "19:30", "مسائي")
-            };
+            var rawTimeslots = GetStandardTimeslots(duration > 0 ? duration : 45);
 
             // Existing bookings for this therapist & date
             var bookedAppointments = await _context.Appointments
@@ -105,10 +147,14 @@ namespace PhysioClinic.Controllers
                 slotList.Add(new TimeslotSlot
                 {
                     Time = slot.start,
+                    EndTime = slot.end,
                     DisplayTime = $"{slot.start} - {slot.end}",
                     Period = slot.period,
                     IsAvailable = existing == null,
-                    BookedByClientName = existing?.Client?.FullName
+                    BookedByClientName = existing?.Client?.FullName,
+                    ClientId = existing?.ClientId,
+                    AppointmentId = existing?.Id,
+                    Status = existing?.Status
                 });
             }
 
@@ -117,6 +163,7 @@ namespace PhysioClinic.Controllers
                 ClientId = clientId,
                 TherapistId = targetTherapistId,
                 SelectedDate = selectedDate,
+                DurationMinutes = duration > 0 ? duration : 45,
                 Clients = await _context.Clients.OrderBy(c => c.FullName).ToListAsync(),
                 Therapists = therapists,
                 ActivePlans = await _context.TreatmentPlans.Where(tp => tp.Status == "Active").ToListAsync(),
@@ -132,7 +179,9 @@ namespace PhysioClinic.Controllers
         [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
         public async Task<IActionResult> Book(BookingViewModel model)
         {
-            if (model.ClientId == null || model.TherapistId == null || string.IsNullOrWhiteSpace(model.SelectedTime))
+            var effectiveStartTime = !string.IsNullOrWhiteSpace(model.CustomStartTime) ? model.CustomStartTime.Trim() : model.SelectedTime?.Trim();
+
+            if (model.ClientId == null || model.TherapistId == null || string.IsNullOrWhiteSpace(effectiveStartTime))
             {
                 ModelState.AddModelError(string.Empty, "يرجى تحديد المريض والمعالج والفترة الزمنية للموعد.");
             }
@@ -142,7 +191,7 @@ namespace PhysioClinic.Controllers
                 var isOccupied = await _context.Appointments
                     .AnyAsync(a => a.TherapistId == model.TherapistId &&
                                    a.AppointmentDate == model.SelectedDate &&
-                                   a.StartTime == model.SelectedTime &&
+                                   a.StartTime == effectiveStartTime &&
                                    a.Status != "Cancelled");
 
                 if (isOccupied)
@@ -151,13 +200,22 @@ namespace PhysioClinic.Controllers
                 }
                 else
                 {
-                    // Compute end time (45 mins)
-                    var timeParts = model.SelectedTime.Split(':');
-                    int startH = int.Parse(timeParts[0]);
-                    int startM = int.Parse(timeParts[1]);
-                    var startDt = new DateTime(2000, 1, 1, startH, startM, 0);
-                    var endDt = startDt.AddMinutes(45);
-                    var endTime = endDt.ToString("HH:mm");
+                    // Compute end time
+                    string endTime;
+                    if (!string.IsNullOrWhiteSpace(model.CustomEndTime))
+                    {
+                        endTime = model.CustomEndTime.Trim();
+                    }
+                    else
+                    {
+                        var timeParts = effectiveStartTime.Split(':');
+                        int startH = int.Parse(timeParts[0]);
+                        int startM = int.Parse(timeParts[1]);
+                        var startDt = new DateTime(2000, 1, 1, startH, startM, 0);
+                        int duration = model.DurationMinutes > 0 ? model.DurationMinutes : 45;
+                        var endDt = startDt.AddMinutes(duration);
+                        endTime = endDt.ToString("HH:mm");
+                    }
 
                     var appointment = new Appointment
                     {
@@ -165,9 +223,10 @@ namespace PhysioClinic.Controllers
                         TherapistId = model.TherapistId.Value,
                         TreatmentPlanId = model.TreatmentPlanId,
                         AppointmentDate = model.SelectedDate,
-                        StartTime = model.SelectedTime,
+                        StartTime = effectiveStartTime,
                         EndTime = endTime,
                         Status = "Scheduled",
+                        SessionNotes = model.Notes,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -199,18 +258,269 @@ namespace PhysioClinic.Controllers
 
                     if (whatsAppSent)
                     {
-                        TempData["SuccessMessage"] = $"تم تسكين وحجز الموعد بنجاح الساعة {model.SelectedTime} بتاريخ {model.SelectedDate:yyyy-MM-dd} وتم إرسال رسالة تأكيد عبر واتساب للمريض ({appointment.Client?.FullName}).";
+                        TempData["SuccessMessage"] = $"تم تأكيد حجز الموعد بنجاح ({effectiveStartTime} - {endTime}) بتاريخ {model.SelectedDate:yyyy-MM-dd} وأُرسلت رسالة تأكيد واتساب للمريض ({appointment.Client?.FullName}).";
                     }
                     else
                     {
-                        TempData["SuccessMessage"] = $"تم تسكين وحجز الموعد بنجاح الساعة {model.SelectedTime} بتاريخ {model.SelectedDate:yyyy-MM-dd}";
+                        TempData["SuccessMessage"] = $"تم تأكيد حجز الموعد بنجاح ({effectiveStartTime} - {endTime}) بتاريخ {model.SelectedDate:yyyy-MM-dd}.";
                     }
 
-                    return RedirectToAction(nameof(Index), new { date = model.SelectedDate });
+                    return RedirectToAction(nameof(Index), new { date = model.SelectedDate.ToString("yyyy-MM-dd"), therapistId = model.TherapistId });
                 }
             }
 
-            return await Book(model.ClientId, model.TherapistId, model.SelectedDate);
+            return await Book(model.ClientId, model.TherapistId, model.SelectedDate, model.DurationMinutes);
+        }
+
+        // POST: Appointments/QuickBook (from Index timeline / modal)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
+        public async Task<IActionResult> QuickBook(int clientId, int therapistId, DateTime appointmentDate, string startTime, string? endTime, int? treatmentPlanId, string? notes)
+        {
+            if (clientId <= 0 || therapistId <= 0 || string.IsNullOrWhiteSpace(startTime))
+            {
+                TempData["ErrorMessage"] = "يرجى تحديد المريض والأخصائي والوقت لحجز الموعد.";
+                return RedirectToAction(nameof(Index), new { date = appointmentDate.ToString("yyyy-MM-dd"), therapistId });
+            }
+
+            var isOccupied = await _context.Appointments
+                .AnyAsync(a => a.TherapistId == therapistId &&
+                               a.AppointmentDate == appointmentDate &&
+                               a.StartTime == startTime &&
+                               a.Status != "Cancelled");
+
+            if (isOccupied)
+            {
+                TempData["ErrorMessage"] = "عذراً، هذه الفترة الزمنية محجوزة مسبقاً لهذا الأخصائي.";
+                return RedirectToAction(nameof(Index), new { date = appointmentDate.ToString("yyyy-MM-dd"), therapistId });
+            }
+
+            var calculatedEndTime = endTime;
+            if (string.IsNullOrWhiteSpace(calculatedEndTime))
+            {
+                var timeParts = startTime.Split(':');
+                if (timeParts.Length == 2 && int.TryParse(timeParts[0], out int h) && int.TryParse(timeParts[1], out int m))
+                {
+                    var startDt = new DateTime(2000, 1, 1, h, m, 0);
+                    calculatedEndTime = startDt.AddMinutes(45).ToString("HH:mm");
+                }
+                else
+                {
+                    calculatedEndTime = startTime;
+                }
+            }
+
+            var appt = new Appointment
+            {
+                ClientId = clientId,
+                TherapistId = therapistId,
+                TreatmentPlanId = treatmentPlanId,
+                AppointmentDate = appointmentDate,
+                StartTime = startTime,
+                EndTime = calculatedEndTime,
+                Status = "Scheduled",
+                SessionNotes = notes,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            if (treatmentPlanId.HasValue)
+            {
+                var plan = await _context.TreatmentPlans.FindAsync(treatmentPlanId.Value);
+                if (plan != null)
+                {
+                    appt.SessionNumber = plan.CompletedSessions + 1;
+                }
+            }
+
+            _context.Appointments.Add(appt);
+            await _context.SaveChangesAsync();
+
+            await _context.Entry(appt).Reference(a => a.Client).LoadAsync();
+            await _context.Entry(appt).Reference(a => a.Therapist).LoadAsync();
+
+            try
+            {
+                await _whatsAppService.SendAppointmentConfirmationAsync(appt);
+            }
+            catch { }
+
+            TempData["SuccessMessage"] = $"تم حجز الموعد بنجاح للمريض ({appt.Client?.FullName}) في تمام الساعة {startTime}.";
+            return RedirectToAction(nameof(Index), new { date = appointmentDate.ToString("yyyy-MM-dd"), therapistId });
+        }
+
+        // GET: Appointments/GetTherapistSlots (AJAX API for Timeslot Management)
+        [HttpGet]
+        [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
+        public async Task<IActionResult> GetTherapistSlots(int therapistId, DateTime date, int duration = 45)
+        {
+            var rawSlots = GetStandardTimeslots(duration > 0 ? duration : 45);
+            var bookedAppointments = await _context.Appointments
+                .Include(a => a.Client)
+                .Where(a => a.TherapistId == therapistId && a.AppointmentDate.Date == date.Date && a.Status != "Cancelled")
+                .ToListAsync();
+
+            var result = rawSlots.Select(slot =>
+            {
+                var existing = bookedAppointments.FirstOrDefault(b => b.StartTime == slot.start);
+                return new
+                {
+                    time = slot.start,
+                    endTime = slot.end,
+                    displayTime = $"{slot.start} - {slot.end}",
+                    period = slot.period,
+                    isAvailable = existing == null,
+                    bookedBy = existing?.Client?.FullName,
+                    clientId = existing?.ClientId,
+                    appointmentId = existing?.Id,
+                    status = existing?.Status
+                };
+            });
+
+            return Json(new { success = true, date = date.ToString("yyyy-MM-dd"), therapistId, slots = result });
+        }
+
+        // GET: Appointments/GetUpcomingAlerts (Receptionist Live Notification API)
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetUpcomingAlerts()
+        {
+            var today = DateTime.Today;
+            var nowTime = DateTime.Now.TimeOfDay;
+
+            var appointments = await _context.Appointments
+                .Include(a => a.Client)
+                .Include(a => a.Therapist)
+                .Include(a => a.TreatmentPlan)
+                .Where(a => a.AppointmentDate == today && a.Status != "Cancelled" && a.Status != "Completed")
+                .ToListAsync();
+
+            var imminentList = new List<object>();
+            var waitingList = new List<object>();
+            var laterTodayList = new List<object>();
+
+            foreach (var appt in appointments)
+            {
+                TimeSpan startTimeSpan;
+                if (!TimeSpan.TryParse(appt.StartTime, out startTimeSpan))
+                {
+                    var parts = appt.StartTime.Split(':');
+                    if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m))
+                        startTimeSpan = new TimeSpan(h, m, 0);
+                    else
+                        startTimeSpan = TimeSpan.Zero;
+                }
+
+                var diffMinutes = (int)(startTimeSpan.TotalMinutes - nowTime.TotalMinutes);
+
+                if (appt.Status == "Confirmed")
+                {
+                    waitingList.Add(new
+                    {
+                        id = appt.Id,
+                        clientId = appt.ClientId,
+                        clientName = appt.Client?.FullName ?? "مريض",
+                        phone = appt.Client?.Phone ?? "",
+                        therapistName = appt.Therapist?.FullName ?? "",
+                        therapistTitle = appt.Therapist?.Title ?? "أخصائي",
+                        therapistColor = appt.Therapist?.ColorTag ?? "#0d9488",
+                        startTime = appt.StartTime,
+                        endTime = appt.EndTime,
+                        sessionType = appt.TreatmentPlan?.Title ?? "استشارة وتقييم",
+                        status = "Confirmed"
+                    });
+                }
+                else if (appt.Status == "Scheduled")
+                {
+                    string statusText;
+                    bool isImminent = false;
+
+                    if (diffMinutes > 0 && diffMinutes <= 45)
+                    {
+                        statusText = $"خلال {diffMinutes} دقيقة";
+                        isImminent = true;
+                    }
+                    else if (diffMinutes <= 0 && diffMinutes >= -25)
+                    {
+                        statusText = diffMinutes == 0 ? "يبدأ الآن!" : $"متأخر {-diffMinutes} دقيقة";
+                        isImminent = true;
+                    }
+                    else if (diffMinutes > 45)
+                    {
+                        var hours = diffMinutes / 60;
+                        var mins = diffMinutes % 60;
+                        statusText = hours > 0 ? $"بعد {hours} س و {mins} د" : $"بعد {mins} دقيقة";
+                    }
+                    else
+                    {
+                        statusText = "فات موعده";
+                    }
+
+                    var item = new
+                    {
+                        id = appt.Id,
+                        clientId = appt.ClientId,
+                        clientName = appt.Client?.FullName ?? "مريض",
+                        phone = appt.Client?.Phone ?? "",
+                        therapistName = appt.Therapist?.FullName ?? "",
+                        therapistTitle = appt.Therapist?.Title ?? "أخصائي",
+                        therapistColor = appt.Therapist?.ColorTag ?? "#0d9488",
+                        startTime = appt.StartTime,
+                        endTime = appt.EndTime,
+                        sessionType = appt.TreatmentPlan?.Title ?? "استشارة وتقييم",
+                        diffMinutes = diffMinutes,
+                        statusText = statusText,
+                        isImminent = isImminent
+                    };
+
+                    if (isImminent)
+                    {
+                        imminentList.Add(item);
+                    }
+                    else if (diffMinutes > 45)
+                    {
+                        laterTodayList.Add(item);
+                    }
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                count = imminentList.Count + waitingList.Count,
+                imminentCount = imminentList.Count,
+                waitingCount = waitingList.Count,
+                imminent = imminentList,
+                waiting = waitingList,
+                upcomingToday = laterTodayList,
+                serverTime = DateTime.Now.ToString("HH:mm")
+            });
+        }
+
+        // POST: Appointments/QuickConfirmAttendance
+        [HttpPost]
+        [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
+        public async Task<IActionResult> QuickConfirmAttendance(int id)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Client)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (appointment == null)
+            {
+                return Json(new { success = false, message = "الموعد غير موجود." });
+            }
+
+            appointment.Status = "Confirmed";
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                id = appointment.Id,
+                clientName = appointment.Client?.FullName,
+                message = $"تم تسجيل وصول المريض ({appointment.Client?.FullName}) بالعيادة بنجاح!"
+            });
         }
 
         // GET: Appointments/SessionReport/5 (Print & PDF Documentation Report)

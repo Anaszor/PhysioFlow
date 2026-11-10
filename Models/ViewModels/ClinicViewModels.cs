@@ -26,10 +26,17 @@ namespace PhysioClinic.Models.ViewModels
     public class TimeslotSlot
     {
         public string Time { get; set; } = string.Empty;
+        public string EndTime { get; set; } = string.Empty;
         public string DisplayTime { get; set; } = string.Empty;
-        public string Period { get; set; } = "صباحي"; // صباحي، مسائي
+        public string Period { get; set; } = "صباحي"; // صباحي، ظهراً، عصراً، مسائي
         public bool IsAvailable { get; set; } = true;
         public string? BookedByClientName { get; set; }
+        public int? AppointmentId { get; set; }
+        public int? ClientId { get; set; }
+        public string? ClientPhone { get; set; }
+        public string? TherapistName { get; set; }
+        public string? Status { get; set; }
+        public string? SessionType { get; set; }
     }
 
     public class BookingViewModel
@@ -39,6 +46,10 @@ namespace PhysioClinic.Models.ViewModels
         public int? TreatmentPlanId { get; set; }
         public DateTime SelectedDate { get; set; } = DateTime.Today;
         public string? SelectedTime { get; set; }
+        public int DurationMinutes { get; set; } = 45;
+        public string? CustomStartTime { get; set; }
+        public string? CustomEndTime { get; set; }
+        public string? Notes { get; set; }
 
         public List<Client> Clients { get; set; } = new();
         public List<Therapist> Therapists { get; set; } = new();
