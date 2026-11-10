@@ -373,5 +373,61 @@ namespace PhysioClinic.Controllers
 
             return RedirectToAction(nameof(Index), new { date = appointment.AppointmentDate });
         }
+
+        // POST: Appointments/Edit
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
+        public async Task<IActionResult> Edit(int id, DateTime appointmentDate, string startTime, string endTime, int therapistId, string? notes)
+        {
+            var appointment = await _context.Appointments.FindAsync(id);
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            appointment.AppointmentDate = appointmentDate;
+            if (!string.IsNullOrWhiteSpace(startTime))
+            {
+                appointment.StartTime = startTime;
+            }
+            if (!string.IsNullOrWhiteSpace(endTime))
+            {
+                appointment.EndTime = endTime;
+            }
+            appointment.TherapistId = therapistId;
+            if (notes != null)
+            {
+                appointment.SessionNotes = notes.Trim();
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "تم تحديث بيانات الموعد بنجاح!";
+            return RedirectToAction(nameof(Index), new { date = appointment.AppointmentDate });
+        }
+
+        // POST: Appointments/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = ClinicRoles.Admin)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Client)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            var date = appointment.AppointmentDate;
+            var clientName = appointment.Client?.FullName ?? "المريض";
+            _context.Appointments.Remove(appointment);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"تم حذف موعد ({clientName}) نهائياً بنجاح.";
+            return RedirectToAction(nameof(Index), new { date });
+        }
     }
 }

@@ -107,7 +107,7 @@ namespace PhysioClinic.Controllers
                 {
                     _context.Update(client);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "تم تحديث بيانات العميل بنجاح!";
+                    TempData["SuccessMessage"] = $"تم تحديث بيانات المريض ({client.FullName}) بنجاح!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -119,6 +119,65 @@ namespace PhysioClinic.Controllers
                 return RedirectToAction(nameof(Details), new { id = client.Id });
             }
             return View(client);
+        }
+
+        // POST: Clients/QuickEdit (Quick AJAX/Form update from appointments table)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuickEdit(int id, string fullName, string phone, string? occupation, string? nationalId, string? notes, string? returnUrl)
+        {
+            var client = await _context.Clients.FindAsync(id);
+            if (client == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(phone))
+            {
+                TempData["ErrorMessage"] = "اسم المريض ورقم الهاتف مطلوبان.";
+            }
+            else
+            {
+                client.FullName = fullName.Trim();
+                client.Phone = phone.Trim();
+                if (occupation != null) client.Occupation = occupation.Trim();
+                if (nationalId != null) client.NationalId = nationalId.Trim();
+                if (notes != null) client.Notes = notes.Trim();
+
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"تم تحديث بيانات المريض ({client.FullName}) بنجاح!";
+            }
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: Clients/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = ClinicRoles.Admin)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var client = await _context.Clients
+                .Include(c => c.Appointments)
+                .Include(c => c.TreatmentPlans)
+                .Include(c => c.IntakeForms)
+                .Include(c => c.Consultations)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (client == null)
+            {
+                TempData["ErrorMessage"] = "لم يتم العثور على ملف المريض المطلوب.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var name = client.FullName;
+            _context.Clients.Remove(client);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"تم حذف ملف المريض ({name}) وسجلاته المرتبطة بنجاح.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

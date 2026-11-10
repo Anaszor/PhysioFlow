@@ -104,6 +104,10 @@
                     <i class="bi bi-people-fill"></i>
                     <span>سجلات وملفات المرضى</span>
                 </a>
+                <a asp-controller="Therapists" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Therapists" ? "active" : "")">
+                    <i class="bi bi-person-badge-fill"></i>
+                    <span>طاقم الأطباء والأخصائيين</span>
+                </a>
 
                 @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
                 {

@@ -51,6 +51,20 @@
                     <i class="bi bi-heart-pulse me-1"></i> إنشاء خطة علاج
                 </a>
             }
+
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-light rounded-pill px-3" title="تعديل بيانات المريض">
+                <i class="bi bi-pencil-square me-1"></i> تعديل
+            </a>
+
+            @if (User.IsInRole(ClinicRoles.Admin))
+            {
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline m-0" onsubmit="return confirm('تحذير: هل أنت متأكد من حذف ملف المريض (@Model.FullName) بالكامل وجميع سجلاته؟');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger bg-opacity-75 border-0 rounded-pill px-3" title="حذف ملف المريض">
+                        <i class="bi bi-trash me-1"></i> حذف
+                    </button>
+                </form>
+            }
         </div>
     </div>
 </div>

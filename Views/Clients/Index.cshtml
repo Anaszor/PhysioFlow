@@ -116,9 +116,23 @@
                                     @client.Appointments.Count() جلسة
                                 </td>
                                 <td class="text-start">
-                                    <a asp-action="Details" asp-route-id="@client.Id" class="btn btn-sm btn-modern btn-modern-soft">
-                                        <i class="bi bi-folder2-open me-1"></i> الملف الطبي
-                                    </a>
+                                    <div class="d-flex align-items-center gap-1 justify-content-end">
+                                        <a asp-action="Details" asp-route-id="@client.Id" class="btn btn-sm btn-modern btn-modern-soft" title="عرض الملف الطبي الشامل">
+                                            <i class="bi bi-folder2-open me-1"></i> الملف
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@client.Id" class="btn btn-sm btn-outline-secondary" title="تعديل بيانات المريض">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        @if (User.IsInRole(ClinicRoles.Admin))
+                                        {
+                                            <form asp-action="Delete" asp-route-id="@client.Id" method="post" class="d-inline m-0" onsubmit="return confirm('تحذير: هل أنت متأكد من حذف ملف المريض (@client.FullName)؟ سيتم حذف جميع مواعيده وسجلاته المرتبطة!');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="حذف ملف المريض">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
