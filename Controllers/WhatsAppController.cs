@@ -73,6 +73,7 @@ namespace PhysioClinic.Controllers
             string apiToken,
             string senderNumber,
             string clinicName,
+            string? apiUrl = null,
             bool autoSendOnBooking = true,
             bool autoSendOnCancel = true)
         {
@@ -87,9 +88,10 @@ namespace PhysioClinic.Controllers
                     var waDict = new Dictionary<string, object>
                     {
                         ["Enabled"] = true,
-                        ["Provider"] = provider ?? "GreenApi",
+                        ["Provider"] = provider ?? "Gateway",
                         ["InstanceId"] = (instanceId ?? "").Trim(),
                         ["ApiToken"] = (apiToken ?? "").Trim(),
+                        ["ApiUrl"] = (apiUrl ?? "").Trim(),
                         ["SenderNumber"] = (senderNumber ?? "").Trim(),
                         ["ClinicName"] = string.IsNullOrWhiteSpace(clinicName) ? "عيادة فيزيو فلو للعلاج الطبيعي والتأهيل" : clinicName.Trim(),
                         ["AutoSendOnBooking"] = autoSendOnBooking,
@@ -103,15 +105,19 @@ namespace PhysioClinic.Controllers
 
                     // Update memory settings
                     _settings.Enabled = true;
-                    _settings.Provider = provider ?? "GreenApi";
+                    _settings.Provider = provider ?? "Gateway";
                     _settings.InstanceId = (instanceId ?? "").Trim();
                     _settings.ApiToken = (apiToken ?? "").Trim();
+                    if (!string.IsNullOrWhiteSpace(apiUrl))
+                    {
+                        _settings.ApiUrl = apiUrl.Trim();
+                    }
                     _settings.SenderNumber = (senderNumber ?? "").Trim();
                     _settings.ClinicName = string.IsNullOrWhiteSpace(clinicName) ? _settings.ClinicName : clinicName.Trim();
                     _settings.AutoSendOnBooking = autoSendOnBooking;
                     _settings.AutoSendOnCancel = autoSendOnCancel;
 
-                    TempData["SuccessMessage"] = "تم حفظ إعدادات الواتساب السحابية بنجاح!";
+                    TempData["SuccessMessage"] = "تم حفظ إعدادات الواتساب بنجاح وتحديث السيرفر!";
                 }
                 else
                 {

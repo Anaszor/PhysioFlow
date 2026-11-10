@@ -90,22 +90,28 @@
                 @Html.AntiForgeryToken()
 
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">المزود السحابي (Provider)</label>
-                    <select name="provider" class="form-select form-control-modern">
-                        <option value="GreenApi" selected="@(settings.Provider == "GreenApi")">Green-API (سحابي مباشر - مجاني تجريبي)</option>
+                    <label class="form-label small fw-semibold">المزود (Provider)</label>
+                    <select name="provider" id="providerSelect" class="form-select form-control-modern" onchange="toggleProviderFields()">
+                        <option value="Gateway" selected="@(settings.Provider == "Gateway")">بوابة الواتساب الخاصة بي (My WhatsApp Gateway)</option>
+                        <option value="GreenApi" selected="@(settings.Provider == "GreenApi")">Green-API (سحابي مباشر)</option>
                         <option value="UltraMsg" selected="@(settings.Provider == "UltraMsg")">UltraMsg (سحابي مباشر)</option>
-                        <option value="Gateway" selected="@(settings.Provider == "Gateway")">Custom Gateway / Node Gateway</option>
                     </select>
+                </div>
+
+                <div class="mb-3" id="apiUrlDiv">
+                    <label class="form-label small fw-semibold">رابط البوابة (Gateway URL / Server URL)</label>
+                    <input type="text" name="apiUrl" id="inputApiUrl" value="@settings.ApiUrl" class="form-control form-control-modern dir-ltr" placeholder="https://xxx.trycloudflare.com أو http://localhost:2785" />
+                    <small class="text-muted">رابط خادم أتمتة الواتساب الخاص بك</small>
                 </div>
 
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label small fw-semibold">معرّف الحساب (IdInstance / InstanceId)</label>
-                        <input type="text" name="instanceId" value="@settings.InstanceId" class="form-control form-control-modern dir-ltr" placeholder="مثال: 7103123456" required />
+                        <label class="form-label small fw-semibold" id="labelInstanceId">معرّف الجلسة (Session ID)</label>
+                        <input type="text" name="instanceId" value="@settings.InstanceId" class="form-control form-control-modern dir-ltr" placeholder="5566fa92-1d24-4599-8321-d38aec69f931" required />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-semibold">رمز الأمان (ApiToken / Token)</label>
-                        <input type="password" name="apiToken" value="@settings.ApiToken" class="form-control form-control-modern dir-ltr" placeholder="رمز الـ Token السري" required />
+                        <label class="form-label small fw-semibold" id="labelApiToken">مفتاح API الخاص بك (API Key)</label>
+                        <input type="password" name="apiToken" value="@settings.ApiToken" class="form-control form-control-modern dir-ltr" placeholder="owa_k1_..." required />
                     </div>
                 </div>
 
