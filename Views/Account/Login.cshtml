@@ -213,6 +213,44 @@
                 icon.classList.add('bi-eye');
             }
         }
+
+        // Mobile-safe smooth submission (prevents iOS Chrome/Safari 302 text-file download bug)
+        document.getElementById('loginForm')?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = this;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> جاري التحقق والدخول...';
+            }
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(form.action || window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    redirect: 'follow'
+                });
+
+                if (response.redirected && response.url && !response.url.toLowerCase().includes('/account/login')) {
+                    window.location.replace(response.url);
+                    return;
+                }
+
+                const text = await response.text();
+                if (response.ok && response.url && !response.url.toLowerCase().includes('/account/login')) {
+                    window.location.replace(response.url);
+                    return;
+                }
+
+                // If error / re-displaying validation
+                document.open();
+                document.write(text);
+                document.close();
+            } catch (err) {
+                form.submit();
+            }
+        });
     </script>
 </body>
 </html>

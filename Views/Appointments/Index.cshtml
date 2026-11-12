@@ -266,259 +266,6 @@
                                 </td>
                             </tr>
 
-                            <!-- DOCTOR & ADMIN ONLY: Post-Session Clinical Documentation Modal -->
-                            @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
-                            {
-                                <div class="modal fade" id="sessionModal-@appt.Id" tabindex="-1" aria-labelledby="modalLabel-@appt.Id" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; overflow: hidden;">
-                                            <!-- Modal Header with Fixed X Position -->
-                                            <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <div class="zone-avatar" style="width: 38px; height: 38px; background: var(--primary); color: #fff; border-radius: 10px;">
-                                                        <i class="bi bi-clipboard2-pulse fs-5"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="modal-title fw-bold text-dark mb-0" id="modalLabel-@appt.Id">نموذج توثيق ما بعد الجلسة (خاص بالطبيب المعالج)</h6>
-                                                        <small class="text-muted">المريض: <strong>@appt.Client?.FullName</strong> | @(appt.TreatmentPlan != null ? appt.TreatmentPlan.Title : "جلسة استشارة وتقييم")</small>
-                                                    </div>
-                                                </div>
-                                                <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                                            </div>
-
-                                            <form asp-action="CompleteSession" method="post" id="form-session-@appt.Id">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@appt.Id" />
-
-                                                <div class="modal-body p-4" style="max-height: calc(85vh - 140px); overflow-y: auto;">
-                                                    <!-- Pain level after session -->
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">
-                                                            مستوى الألم بعد إتمام الجلسة (VAS Pain Scale 1-10)
-                                                        </label>
-                                                        <div class="d-flex align-items-center gap-3">
-                                                            <input type="range" class="form-range flex-grow-1" min="1" max="10" name="painLevelAfter" id="painRange-@appt.Id" value="@(appt.PainLevelAfter ?? 3)" oninput="document.getElementById('painVal-@appt.Id').innerText = this.value + ' / 10'" />
-                                                            <span class="badge bg-teal fs-6 px-3 py-2 rounded-pill text-white" style="background-color: var(--primary);" id="painVal-@appt.Id">@(appt.PainLevelAfter ?? 3) / 10</span>
-                                                        </div>
-                                                        <small class="text-muted">1-3 ألم خفيف محتمل، 4-6 ألم متوسط، 7-10 ألم شديد.</small>
-                                                    </div>
-
-                                                    <!-- Modalities & Techniques -->
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">الأساليب والتقنيات المنفذة في هذه الجلسة</label>
-                                                        <input type="text" name="techniquesUsed" class="form-control form-control-modern" value="@appt.TechniquesUsed" placeholder="مثال: علاج يدوي وتحريك فقرات قطنية، تيار TENS 15 دقيقة، إبر جافة" />
-                                                    </div>
-
-                                                    <!-- Patient Response -->
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">استجابة المريض وتحمله للتمارين (Patient Response)</label>
-                                                        <input type="text" name="patientResponse" class="form-control form-control-modern" value="@(appt.PatientResponse ?? "")" placeholder="مثال: تحسن في المدى الحركي بنسبة 20%، خفة في الحركة دون تنميل" />
-                                                    </div>
-
-                                                    <!-- Clinical Progress Notes -->
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">الملاحظات السريرية المفصلة وتوجيهات الطبيب</label>
-                                                        <textarea name="clinicalNotes" rows="3" class="form-control form-control-modern" placeholder="وثّق ملاحظاتك الطبية حول حالة المريض وتطورها...">@(appt.ClinicalNotes ?? appt.SessionNotes)</textarea>
-                                                    </div>
-
-                                                    <!-- Next Session Recommendations -->
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">التوصيات والتمارين المنزلية حتى الجلسة القادمة</label>
-                                                        <input type="text" name="nextSessionPlan" class="form-control form-control-modern" value="@(appt.NextSessionPlan ?? "")" placeholder="مثال: الاستمرار على تمرين مكينزي 3 مرات يومياً والكمادات الباردة" />
-                                                    </div>
-
-                                                    <!-- Patient Signature Section -->
-                                                    <div class="mb-2">
-                                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                                            <label class="form-label-modern fw-bold mb-0">
-                                                                <i class="bi bi-pen me-1 text-primary"></i> توقيع المريض (Patient Signature)
-                                                            </label>
-                                                            <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0 fw-semibold" onclick="clearSignaturePad(@appt.Id)">
-                                                                <i class="bi bi-eraser me-1"></i> مسح التوقيع
-                                                            </button>
-                                                        </div>
-                                                        <small class="text-muted d-block mb-2">يرجى من المريض أو ولي أمره التوقيع في المربع أدناه (باللمس أو الفأرة) لتأكيد إتمام الجلسة واستلام التوجيهات:</small>
-                                                        
-                                                        <div class="signature-box-wrapper position-relative rounded-3 p-2 bg-light border" style="border: 2px dashed #94a3b8 !important; min-height: 140px;">
-                                                            @if (!string.IsNullOrEmpty(appt.PatientSignature))
-                                                            {
-                                                                <div id="sigPreviewContainer-@appt.Id" class="text-center py-2">
-                                                                    <img src="@appt.PatientSignature" alt="توقيع المريض" style="max-height: 100px; max-width: 100%; object-fit: contain;" />
-                                                                    <div class="text-muted small mt-2 d-flex align-items-center justify-content-center gap-2">
-                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                                            <i class="bi bi-check-circle-fill me-1"></i> توقيع إلكتروني محفوظ
-                                                                        </span>
-                                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="enableReSign(@appt.Id)">
-                                                                            <i class="bi bi-arrow-repeat me-1"></i> إعادة التوقيع
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                                <div id="sigCanvasWrapper-@appt.Id" class="d-none position-relative">
-                                                                    <canvas id="sigCanvas-@appt.Id" class="w-100 bg-white rounded border" height="130" style="cursor: crosshair; touch-action: none;"></canvas>
-                                                                    <div id="sigPlaceholder-@appt.Id" class="position-absolute top-50 start-50 translate-middle text-muted" style="pointer-events: none; opacity: 0.35;">
-                                                                        <i class="bi bi-pen me-1"></i> وقع هنا (Sign Here)
-                                                                    </div>
-                                                                </div>
-                                                            }
-                                                            else
-                                                            {
-                                                                <div id="sigCanvasWrapper-@appt.Id" class="position-relative">
-                                                                    <canvas id="sigCanvas-@appt.Id" class="w-100 bg-white rounded border" height="130" style="cursor: crosshair; touch-action: none;"></canvas>
-                                                                    <div id="sigPlaceholder-@appt.Id" class="position-absolute top-50 start-50 translate-middle text-muted" style="pointer-events: none; opacity: 0.35;">
-                                                                        <i class="bi bi-pen me-1"></i> وقع هنا (Sign Here)
-                                                                    </div>
-                                                                </div>
-                                                            }
-                                                            <input type="hidden" name="patientSignature" id="sigInput-@appt.Id" value="@appt.PatientSignature" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="modal-footer border-top bg-light p-3 d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        @if (appt.Status == "Completed")
-                                                        {
-                                                            <a href="@Url.Action("SessionReport", "Appointments", new { id = appt.Id })" target="_blank" class="btn btn-modern btn-outline-danger">
-                                                                <i class="bi bi-file-earmark-pdf me-1"></i> طباعة / تحميل PDF
-                                                            </a>
-                                                        }
-                                                    </div>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
-                                                        <button type="submit" class="btn btn-modern btn-modern-primary px-4">
-                                                            <i class="bi bi-check2-circle me-1"></i> اعتماد التقرير وإتمام الجلسة
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-
-                            <!-- RECEPTIONIST & ADMIN: Edit Appointment Modal -->
-                            @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
-                            {
-                                <div class="modal fade" id="editApptModal-@appt.Id" tabindex="-1" aria-labelledby="editApptLabel-@appt.Id" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; overflow: hidden;">
-                                            <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <div class="zone-avatar" style="width: 36px; height: 36px; background: var(--primary); color: #fff; border-radius: 10px;">
-                                                        <i class="bi bi-calendar2-event fs-6"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="modal-title fw-bold text-dark mb-0" id="editApptLabel-@appt.Id">تعديل الموعد والأخصائي</h6>
-                                                        <small class="text-muted">المريض: <strong>@appt.Client?.FullName</strong></small>
-                                                    </div>
-                                                </div>
-                                                <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                                            </div>
-                                            <form asp-action="Edit" asp-controller="Appointments" method="post">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@appt.Id" />
-                                                <div class="modal-body p-4">
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">تاريخ الموعد</label>
-                                                        <input type="date" name="appointmentDate" class="form-control form-control-modern" value="@appt.AppointmentDate.ToString("yyyy-MM-dd")" required />
-                                                    </div>
-                                                    <div class="row g-2 mb-3">
-                                                        <div class="col-6">
-                                                            <label class="form-label-modern fw-bold mb-1">وقت البدء</label>
-                                                            <input type="time" name="startTime" class="form-control form-control-modern" value="@appt.StartTime" required />
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <label class="form-label-modern fw-bold mb-1">وقت الانتهاء</label>
-                                                            <input type="time" name="endTime" class="form-control form-control-modern" value="@appt.EndTime" required />
-                                                        </div>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">الأخصائي المعالج</label>
-                                                        <select name="therapistId" class="form-select form-control-modern" required>
-                                                            @foreach (var th in therapists)
-                                                            {
-                                                                <!option value="@th.Id" @(th.Id == appt.TherapistId ? "selected" : "")>
-                                                                    @th.FullName
-                                                                </!option>
-                                                            }
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-2">
-                                                        <label class="form-label-modern fw-bold mb-1">ملاحظات الموعد</label>
-                                                        <textarea name="notes" rows="2" class="form-control form-control-modern" placeholder="أية ملاحظات إدارية أو سريرية...">@appt.SessionNotes</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-top bg-light p-3 d-flex justify-content-end gap-2">
-                                                    <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
-                                                    <button type="submit" class="btn btn-modern btn-modern-primary">
-                                                        <i class="bi bi-check-lg me-1"></i> حفظ تعديلات الموعد
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- RECEPTIONIST & ADMIN: Quick Edit Patient Modal -->
-                                <div class="modal fade" id="editPatientModal-@appt.Id" tabindex="-1" aria-labelledby="editPatientLabel-@appt.Id" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; overflow: hidden;">
-                                            <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <div class="zone-avatar" style="width: 36px; height: 36px; background: #0284c7; color: #fff; border-radius: 10px;">
-                                                        <i class="bi bi-person-gear fs-6"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="modal-title fw-bold text-dark mb-0" id="editPatientLabel-@appt.Id">تعديل بيانات المريض</h6>
-                                                        <small class="text-muted">تحديث سريع للبيانات الشخصية والاتصال</small>
-                                                    </div>
-                                                </div>
-                                                <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-                                            </div>
-                                            <form asp-action="QuickEdit" asp-controller="Clients" method="post">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@appt.ClientId" />
-                                                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                                                <div class="modal-body p-4">
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">اسم المريض الكامل</label>
-                                                        <input type="text" name="fullName" class="form-control form-control-modern" value="@appt.Client?.FullName" required />
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label-modern fw-bold mb-1">رقم الهاتف (واتساب)</label>
-                                                        <input type="text" name="phone" dir="ltr" class="form-control form-control-modern text-end" value="@appt.Client?.Phone" required />
-                                                    </div>
-                                                    <div class="row g-2 mb-3">
-                                                        <div class="col-6">
-                                                            <label class="form-label-modern fw-bold mb-1">المهنة</label>
-                                                            <input type="text" name="occupation" class="form-control form-control-modern" value="@appt.Client?.Occupation" placeholder="مثال: مهندس" />
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <label class="form-label-modern fw-bold mb-1">رقم الهوية / الإقامة</label>
-                                                            <input type="text" name="nationalId" class="form-control form-control-modern" value="@appt.Client?.NationalId" />
-                                                        </div>
-                                                    </div>
-                                                    <div class="mb-2">
-                                                        <label class="form-label-modern fw-bold mb-1">ملاحظات عامة</label>
-                                                        <textarea name="notes" rows="2" class="form-control form-control-modern" placeholder="ملاحظات حول المريض...">@appt.Client?.Notes</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-top bg-light p-3 d-flex justify-content-between align-items-center">
-                                                    <a href="@Url.Action("Edit", "Clients", new { id = appt.ClientId })" class="btn btn-sm btn-outline-secondary">
-                                                        <i class="bi bi-box-arrow-up-right me-1"></i> فتح الملف الكامل
-                                                    </a>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
-                                                        <button type="submit" class="btn btn-modern btn-modern-primary">
-                                                            <i class="bi bi-check-lg me-1"></i> حفظ البيانات
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
                         }
                     </tbody>
                 </table>
@@ -526,6 +273,264 @@
         }
     </div>
 </div>
+
+<!-- All Appointment Modals Rendered Cleanly Outside Table for Robust Mobile Layout -->
+@if (Model.Any())
+{
+    @foreach (var appt in Model)
+    {
+        @if (User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin))
+        {
+            <!-- DOCTOR & ADMIN ONLY: Post-Session Clinical Documentation Modal -->
+            <div class="modal fade" id="sessionModal-@appt.Id" tabindex="-1" aria-labelledby="modalLabel-@appt.Id" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+                    <form class="modal-content border-0 shadow-lg" asp-action="CompleteSession" method="post" id="form-session-@appt.Id" style="border-radius: 1.25rem;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@appt.Id" />
+
+                        <!-- Modal Header (Always visible and anchored at top) -->
+                        <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="zone-avatar" style="width: 38px; height: 38px; background: var(--primary); color: #fff; border-radius: 10px; flex-shrink: 0;">
+                                    <i class="bi bi-clipboard2-pulse fs-5"></i>
+                                </div>
+                                <div>
+                                    <h6 class="modal-title fw-bold text-dark mb-0 fs-6" id="modalLabel-@appt.Id">نموذج توثيق ما بعد الجلسة (خاص بالطبيب المعالج)</h6>
+                                    <small class="text-muted d-block" style="font-size: 0.78rem;">المريض: <strong>@appt.Client?.FullName</strong> | @(appt.TreatmentPlan != null ? appt.TreatmentPlan.Title : "جلسة استشارة وتقييم")</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                        </div>
+
+                        <!-- Modal Body (Smoothly scrollable, responsive padding) -->
+                        <div class="modal-body p-3 p-md-4" style="-webkit-overflow-scrolling: touch;">
+                            <!-- Pain level after session -->
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">
+                                    مستوى الألم بعد إتمام الجلسة (VAS Pain Scale 1-10)
+                                </label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="range" class="form-range flex-grow-1" min="1" max="10" name="painLevelAfter" id="painRange-@appt.Id" value="@(appt.PainLevelAfter ?? 3)" oninput="document.getElementById('painVal-@appt.Id').innerText = this.value + ' / 10'" />
+                                    <span class="badge bg-teal fs-6 px-3 py-2 rounded-pill text-white" style="background-color: var(--primary);" id="painVal-@appt.Id" dir="ltr">@(appt.PainLevelAfter ?? 3) / 10</span>
+                                </div>
+                                <small class="text-muted">1-3 ألم خفيف محتمل، 4-6 ألم متوسط، 7-10 ألم شديد.</small>
+                            </div>
+
+                            <!-- Modalities & Techniques -->
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">الأساليب والتقنيات المنفذة في هذه الجلسة</label>
+                                <input type="text" name="techniquesUsed" class="form-control form-control-modern" value="@appt.TechniquesUsed" placeholder="مثال: علاج يدوي وتحريك فقرات قطنية، تيار TENS 15 دقيقة، إبر جافة" />
+                            </div>
+
+                            <!-- Patient Response -->
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">استجابة المريض وتحمله للتمارين (Patient Response)</label>
+                                <input type="text" name="patientResponse" class="form-control form-control-modern" value="@(appt.PatientResponse ?? "")" placeholder="مثال: تحسن في المدى الحركي بنسبة 20%، خفة في الحركة دون تنميل" />
+                            </div>
+
+                            <!-- Clinical Progress Notes -->
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">الملاحظات السريرية المفصلة وتوجيهات الطبيب</label>
+                                <textarea name="clinicalNotes" rows="3" class="form-control form-control-modern" placeholder="وثّق ملاحظاتك الطبية حول حالة المريض وتطورها...">@(appt.ClinicalNotes ?? appt.SessionNotes)</textarea>
+                            </div>
+
+                            <!-- Next Session Recommendations -->
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">التوصيات والتمارين المنزلية حتى الجلسة القادمة</label>
+                                <input type="text" name="nextSessionPlan" class="form-control form-control-modern" value="@(appt.NextSessionPlan ?? "")" placeholder="مثال: الاستمرار على تمرين مكينزي 3 مرات يومياً والكمادات الباردة" />
+                            </div>
+
+                            <!-- Patient Signature Section -->
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label-modern fw-bold mb-0">
+                                        <i class="bi bi-pen me-1 text-primary"></i> توقيع المريض (Patient Signature)
+                                    </label>
+                                    <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0 fw-semibold" onclick="clearSignaturePad(@appt.Id)">
+                                        <i class="bi bi-eraser me-1"></i> مسح التوقيع
+                                    </button>
+                                </div>
+                                <small class="text-muted d-block mb-2">يرجى من المريض أو ولي أمره التوقيع في المربع أدناه (باللمس أو الفأرة) لتأكيد إتمام الجلسة واستلام التوجيهات:</small>
+                                
+                                <div class="signature-box-wrapper position-relative rounded-3 p-2 bg-light border" style="border: 2px dashed #94a3b8 !important; min-height: 140px;">
+                                    @if (!string.IsNullOrEmpty(appt.PatientSignature))
+                                    {
+                                        <div id="sigPreviewContainer-@appt.Id" class="text-center py-2">
+                                            <img src="@appt.PatientSignature" alt="توقيع المريض" style="max-height: 100px; max-width: 100%; object-fit: contain;" />
+                                            <div class="text-muted small mt-2 d-flex align-items-center justify-content-center gap-2">
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="bi bi-check-circle-fill me-1"></i> توقيع إلكتروني محفوظ
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="enableReSign(@appt.Id)">
+                                                    <i class="bi bi-arrow-repeat me-1"></i> إعادة التوقيع
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="sigCanvasWrapper-@appt.Id" class="d-none position-relative">
+                                            <canvas id="sigCanvas-@appt.Id" class="w-100 bg-white rounded border" height="130" style="cursor: crosshair; touch-action: none;"></canvas>
+                                            <div id="sigPlaceholder-@appt.Id" class="position-absolute top-50 start-50 translate-middle text-muted" style="pointer-events: none; opacity: 0.35;">
+                                                <i class="bi bi-pen me-1"></i> وقع هنا (Sign Here)
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div id="sigCanvasWrapper-@appt.Id" class="position-relative">
+                                            <canvas id="sigCanvas-@appt.Id" class="w-100 bg-white rounded border" height="130" style="cursor: crosshair; touch-action: none;"></canvas>
+                                            <div id="sigPlaceholder-@appt.Id" class="position-absolute top-50 start-50 translate-middle text-muted" style="pointer-events: none; opacity: 0.35;">
+                                                <i class="bi bi-pen me-1"></i> وقع هنا (Sign Here)
+                                            </div>
+                                        </div>
+                                    }
+                                    <input type="hidden" name="patientSignature" id="sigInput-@appt.Id" value="@appt.PatientSignature" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Footer (Sticky at bottom, wraps nicely on phone) -->
+                        <div class="modal-footer border-top bg-light p-3 d-flex flex-column-reverse flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2">
+                            <div>
+                                @if (appt.Status == "Completed")
+                                {
+                                    <a href="@Url.Action("SessionReport", "Appointments", new { id = appt.Id })" target="_blank" class="btn btn-modern btn-outline-danger w-100 w-sm-auto">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> طباعة / تحميل PDF
+                                    </a>
+                                }
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-modern btn-modern-outline flex-grow-1 flex-sm-grow-0" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-modern btn-modern-primary flex-grow-1 flex-sm-grow-0 px-4">
+                                    <i class="bi bi-check2-circle me-1"></i> اعتماد التقرير وإتمام الجلسة
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <!-- RECEPTIONIST & ADMIN: Edit Appointment Modal -->
+        @if (User.IsInRole(ClinicRoles.Receptionist) || User.IsInRole(ClinicRoles.Admin))
+        {
+            <div class="modal fade" id="editApptModal-@appt.Id" tabindex="-1" aria-labelledby="editApptLabel-@appt.Id" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <form class="modal-content border-0 shadow-lg" asp-action="Edit" asp-controller="Appointments" method="post" style="border-radius: 1.25rem;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@appt.Id" />
+                        <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="zone-avatar" style="width: 36px; height: 36px; background: var(--primary); color: #fff; border-radius: 10px; flex-shrink: 0;">
+                                    <i class="bi bi-calendar2-event fs-6"></i>
+                                </div>
+                                <div>
+                                    <h6 class="modal-title fw-bold text-dark mb-0 fs-6" id="editApptLabel-@appt.Id">تعديل الموعد والأخصائي</h6>
+                                    <small class="text-muted d-block" style="font-size: 0.78rem;">المريض: <strong>@appt.Client?.FullName</strong></small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                        </div>
+                        <div class="modal-body p-3 p-md-4" style="-webkit-overflow-scrolling: touch;">
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">تاريخ الموعد</label>
+                                <input type="date" name="appointmentDate" class="form-control form-control-modern" value="@appt.AppointmentDate.ToString("yyyy-MM-dd")" required />
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label-modern fw-bold mb-1">وقت البدء</label>
+                                    <input type="time" name="startTime" class="form-control form-control-modern" value="@appt.StartTime" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label-modern fw-bold mb-1">وقت الانتهاء</label>
+                                    <input type="time" name="endTime" class="form-control form-control-modern" value="@appt.EndTime" required />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">الأخصائي المعالج</label>
+                                <select name="therapistId" class="form-select form-control-modern" required>
+                                    @foreach (var th in therapists)
+                                    {
+                                        <!option value="@th.Id" @(th.Id == appt.TherapistId ? "selected" : "")>
+                                            @th.FullName
+                                        </!option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label-modern fw-bold mb-1">ملاحظات الموعد</label>
+                                <textarea name="notes" rows="2" class="form-control form-control-modern" placeholder="أية ملاحظات إدارية أو سريرية...">@appt.SessionNotes</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top bg-light p-3 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-modern btn-modern-primary">
+                                <i class="bi bi-check-lg me-1"></i> حفظ تعديلات الموعد
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- RECEPTIONIST & ADMIN: Quick Edit Patient Modal -->
+            <div class="modal fade" id="editPatientModal-@appt.Id" tabindex="-1" aria-labelledby="editPatientLabel-@appt.Id" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <form class="modal-content border-0 shadow-lg" asp-action="QuickEdit" asp-controller="Clients" method="post" style="border-radius: 1.25rem;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@appt.ClientId" />
+                        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                        <div class="modal-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background-color: var(--primary-light);">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="zone-avatar" style="width: 36px; height: 36px; background: #0284c7; color: #fff; border-radius: 10px; flex-shrink: 0;">
+                                    <i class="bi bi-person-gear fs-6"></i>
+                                </div>
+                                <div>
+                                    <h6 class="modal-title fw-bold text-dark mb-0 fs-6" id="editPatientLabel-@appt.Id">تعديل بيانات المريض</h6>
+                                    <small class="text-muted d-block" style="font-size: 0.78rem;">تحديث سريع للبيانات الشخصية والاتصال</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close m-0 shadow-none" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                        </div>
+                        <div class="modal-body p-3 p-md-4" style="-webkit-overflow-scrolling: touch;">
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">اسم المريض الكامل</label>
+                                <input type="text" name="fullName" class="form-control form-control-modern" value="@appt.Client?.FullName" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label-modern fw-bold mb-1">رقم الهاتف (واتساب)</label>
+                                <input type="text" name="phone" dir="ltr" class="form-control form-control-modern text-end" value="@appt.Client?.Phone" required />
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label-modern fw-bold mb-1">المهنة</label>
+                                    <input type="text" name="occupation" class="form-control form-control-modern" value="@appt.Client?.Occupation" placeholder="مثال: مهندس" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label-modern fw-bold mb-1">رقم الهوية / الإقامة</label>
+                                    <input type="text" name="nationalId" class="form-control form-control-modern" value="@appt.Client?.NationalId" />
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label-modern fw-bold mb-1">ملاحظات عامة</label>
+                                <textarea name="notes" rows="2" class="form-control form-control-modern" placeholder="ملاحظات حول المريض...">@appt.Client?.Notes</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top bg-light p-3 d-flex flex-column-reverse flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2">
+                            <a href="@Url.Action("Edit", "Clients", new { id = appt.ClientId })" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-box-arrow-up-right me-1"></i> فتح الملف الكامل
+                            </a>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-modern btn-modern-outline flex-grow-1 flex-sm-grow-0" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-modern btn-modern-primary flex-grow-1 flex-sm-grow-0">
+                                    <i class="bi bi-check-lg me-1"></i> حفظ البيانات
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+    }
+}
+
 
 @section Scripts {
 <script>

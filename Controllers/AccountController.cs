@@ -67,11 +67,12 @@ namespace PhysioClinic.Controllers
 
             if (result.Succeeded)
             {
-                if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
-                {
-                    return Redirect(model.ReturnUrl);
-                }
-                return RedirectToAction("Index", "Dashboard");
+                var destination = (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+                    ? model.ReturnUrl
+                    : Url.Action("Index", "Dashboard") ?? "/";
+
+                Response.ContentType = "text/html; charset=utf-8";
+                return LocalRedirect(destination);
             }
 
             if (result.IsLockedOut)

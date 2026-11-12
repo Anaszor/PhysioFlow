@@ -1112,5 +1112,37 @@ ul.nav li, ul.nav-pills li, .segmented-tabs li {
     border-color: #dc2626;
 }
 
+/* ==========================================================================
+   Mobile-Optimized Modals
+   ========================================================================== */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem auto !important;
+        max-width: calc(100vw - 1rem) !important;
+    }
+    .modal-dialog-centered.modal-dialog-scrollable {
+        min-height: calc(100% - 1rem) !important;
+        max-height: calc(100% - 1rem) !important;
+    }
+    .modal-dialog-scrollable .modal-content {
+        max-height: calc(100vh - 1.5rem) !important;
+        border-radius: 1rem !important;
+    }
+    .modal-header {
+        padding: 0.75rem 1rem !important;
+    }
+    .modal-body {
+        padding: 1rem !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+    .signature-box-wrapper {
+        min-height: 120px !important;
+    }
+}
+
+
 
 
