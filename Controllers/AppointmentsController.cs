@@ -27,10 +27,10 @@ namespace PhysioClinic.Controllers
             _whatsAppService = whatsAppService;
         }
 
-        private static List<(string start, string end, string period)> GetStandardTimeslots(int durationMinutes = 45)
+        private static List<(string start, string end, string period)> GetStandardTimeslots(int durationMinutes = 60)
         {
             var slots = new List<(string start, string end, string period)>();
-            int dur = durationMinutes > 0 ? durationMinutes : 45;
+            int dur = durationMinutes > 0 ? durationMinutes : 60;
 
             void AddRange(TimeSpan from, TimeSpan to, string period)
             {
@@ -45,7 +45,7 @@ namespace PhysioClinic.Controllers
 
             AddRange(new TimeSpan(9, 0, 0), new TimeSpan(12, 0, 0), "صباحي");
             AddRange(new TimeSpan(13, 0, 0), new TimeSpan(16, 0, 0), "ظهراً");
-            AddRange(new TimeSpan(16, 30, 0), new TimeSpan(20, 0, 0), "مسائي");
+            AddRange(new TimeSpan(16, 0, 0), new TimeSpan(20, 0, 0), "مسائي");
             return slots;
         }
 
@@ -88,7 +88,7 @@ namespace PhysioClinic.Controllers
 
             // Generate Timeline Slots for the day (for selected therapist, or first active)
             var timelineTherapistId = therapistId ?? activeTherapists.FirstOrDefault()?.Id ?? 0;
-            var rawTimeline = GetStandardTimeslots(45);
+            var rawTimeline = GetStandardTimeslots(60);
             var dayBookings = await _context.Appointments
                 .Include(a => a.Client)
                 .Include(a => a.Therapist)
@@ -126,13 +126,13 @@ namespace PhysioClinic.Controllers
         // GET: Appointments/Book (Receptionist & Admin ONLY)
         [HttpGet]
         [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
-        public async Task<IActionResult> Book(int? clientId, int? therapistId, DateTime? date, int duration = 45)
+        public async Task<IActionResult> Book(int? clientId, int? therapistId, DateTime? date, int duration = 60)
         {
             var selectedDate = date ?? DateTime.Today;
             var therapists = await _context.Therapists.Where(t => t.IsActive).ToListAsync();
             var targetTherapistId = therapistId ?? therapists.FirstOrDefault()?.Id ?? 1;
 
-            var rawTimeslots = GetStandardTimeslots(duration > 0 ? duration : 45);
+            var rawTimeslots = GetStandardTimeslots(duration > 0 ? duration : 60);
 
             // Existing bookings for this therapist & date
             var bookedAppointments = await _context.Appointments
@@ -163,7 +163,7 @@ namespace PhysioClinic.Controllers
                 ClientId = clientId,
                 TherapistId = targetTherapistId,
                 SelectedDate = selectedDate,
-                DurationMinutes = duration > 0 ? duration : 45,
+                DurationMinutes = duration > 0 ? duration : 60,
                 Clients = await _context.Clients.OrderBy(c => c.FullName).ToListAsync(),
                 Therapists = therapists,
                 ActivePlans = await _context.TreatmentPlans.Where(tp => tp.Status == "Active").ToListAsync(),
@@ -212,7 +212,7 @@ namespace PhysioClinic.Controllers
                         int startH = int.Parse(timeParts[0]);
                         int startM = int.Parse(timeParts[1]);
                         var startDt = new DateTime(2000, 1, 1, startH, startM, 0);
-                        int duration = model.DurationMinutes > 0 ? model.DurationMinutes : 45;
+                        int duration = model.DurationMinutes > 0 ? model.DurationMinutes : 60;
                         var endDt = startDt.AddMinutes(duration);
                         endTime = endDt.ToString("HH:mm");
                     }
@@ -303,7 +303,7 @@ namespace PhysioClinic.Controllers
                 if (timeParts.Length == 2 && int.TryParse(timeParts[0], out int h) && int.TryParse(timeParts[1], out int m))
                 {
                     var startDt = new DateTime(2000, 1, 1, h, m, 0);
-                    calculatedEndTime = startDt.AddMinutes(45).ToString("HH:mm");
+                    calculatedEndTime = startDt.AddMinutes(60).ToString("HH:mm");
                 }
                 else
                 {
@@ -352,9 +352,9 @@ namespace PhysioClinic.Controllers
         // GET: Appointments/GetTherapistSlots (AJAX API for Timeslot Management)
         [HttpGet]
         [Authorize(Roles = $"{ClinicRoles.Admin},{ClinicRoles.Receptionist}")]
-        public async Task<IActionResult> GetTherapistSlots(int therapistId, DateTime date, int duration = 45)
+        public async Task<IActionResult> GetTherapistSlots(int therapistId, DateTime date, int duration = 60)
         {
-            var rawSlots = GetStandardTimeslots(duration > 0 ? duration : 45);
+            var rawSlots = GetStandardTimeslots(duration > 0 ? duration : 60);
             var bookedAppointments = await _context.Appointments
                 .Include(a => a.Client)
                 .Where(a => a.TherapistId == therapistId && a.AppointmentDate.Date == date.Date && a.Status != "Cancelled")
@@ -435,7 +435,7 @@ namespace PhysioClinic.Controllers
                     string statusText;
                     bool isImminent = false;
 
-                    if (diffMinutes > 0 && diffMinutes <= 45)
+                    if (diffMinutes > 0 && diffMinutes <= 60)
                     {
                         statusText = $"خلال {diffMinutes} دقيقة";
                         isImminent = true;
@@ -445,7 +445,7 @@ namespace PhysioClinic.Controllers
                         statusText = diffMinutes == 0 ? "يبدأ الآن!" : $"متأخر {-diffMinutes} دقيقة";
                         isImminent = true;
                     }
-                    else if (diffMinutes > 45)
+                    else if (diffMinutes > 60)
                     {
                         var hours = diffMinutes / 60;
                         var mins = diffMinutes % 60;
@@ -477,7 +477,7 @@ namespace PhysioClinic.Controllers
                     {
                         imminentList.Add(item);
                     }
-                    else if (diffMinutes > 45)
+                    else if (diffMinutes > 60)
                     {
                         laterTodayList.Add(item);
                     }

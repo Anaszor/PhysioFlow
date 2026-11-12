@@ -173,7 +173,13 @@
                                     <tr>
                                         <td>
                                             <div class="fw-bold text-dark font-monospace" dir="ltr">@appt.StartTime - @appt.EndTime</div>
-                                            <span class="text-muted small">45 دقيقة</span>
+                                            <span class="text-muted small">60 دقيقة (ساعة)</span>
+                                            @if ((User.IsInRole(ClinicRoles.Doctor) || User.IsInRole(ClinicRoles.Admin)) && appt.Status != "Completed")
+                                            {
+                                                <a asp-controller="Appointments" asp-action="Index" asp-route-date="@appt.AppointmentDate.ToString("yyyy-MM-dd")" class="d-block btn btn-sm btn-modern-primary py-0 px-2 mt-1 shadow-sm" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-clipboard2-pulse me-1"></i> توثيق الجلسة
+                                                </a>
+                                            }
                                         </td>
                                         <td>
                                             <a asp-controller="Clients" asp-action="Details" asp-route-id="@appt.ClientId" class="text-decoration-none fw-bold text-dark">
